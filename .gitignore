@@ -1,0 +1,19 @@
+# Dependências
+node_modules/
+
+# Build
+dist/
+
+# Variáveis de ambiente
+.env
+
+# Uploads e logs (gerados em runtime)
+backend/uploads/*
+backend/logs/*
+
+# Vite
+frontend/.vite/
+
+# OS
+.DS_Store
+Thumbs.db
