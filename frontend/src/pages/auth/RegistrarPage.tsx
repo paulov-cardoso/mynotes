@@ -12,13 +12,11 @@ import {
   LinkAuth,
   IconeUsuario,
   IconeEdicao,
-  IconeEmail,
 } from './AuthComponents'
 
 interface Erros {
   username?:     string
   nomeExibicao?: string
-  email?:        string
   password1?:    string
   password2?:    string
 }
@@ -29,7 +27,6 @@ export function RegistrarPage() {
 
   const [username,     setUsername]     = useState('')
   const [nomeExibicao, setNomeExibicao] = useState('')
-  const [email,        setEmail]        = useState('')
   const [password1,    setPassword1]    = useState('')
   const [password2,    setPassword2]    = useState('')
   const [senhaFocada,  setSenhaFocada]  = useState(false)
@@ -48,7 +45,7 @@ export function RegistrarPage() {
 
     setCarregando(true)
     try {
-      await registrar(username, nomeExibicao, email, password1)
+      await registrar(username, nomeExibicao, password1)
       navigate('/')
     } catch (err) {
       setErroGeral(err instanceof Error ? err.message : 'Erro ao criar conta.')
@@ -83,17 +80,6 @@ export function RegistrarPage() {
         value={nomeExibicao} onChange={setNomeExibicao}
         erro={erros.nomeExibicao}
         icone={<IconeEdicao />}
-        onKeyDown={onEnter}
-      />
-
-      <CampoTexto
-        id="id_email" name="email"
-        type="email"
-        placeholder="Seu email"
-        value={email} onChange={setEmail}
-        autoComplete="email"
-        erro={erros.email}
-        icone={<IconeEmail />}
         onKeyDown={onEnter}
       />
 
