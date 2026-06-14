@@ -43,7 +43,7 @@ const inputBase: React.CSSProperties = {
   paddingRight: "44px",
   outline: "none",
   transition: "background 0.2s, border-color 0.2s",
-  boxShadow: "0 1px 0 rgba(255,255,255,0.65) inset",
+  boxShadow: "0 1px 0 rgba(255, 255, 255, 0.21) inset, 0 2px 8px rgba(80,40,140,0.12)",
   fontFamily: FONT,
 }
 
@@ -272,7 +272,7 @@ export function BotaoPrimario({ children, carregando, type = "submit", onClick }
         borderRadius: "999px",
         border: "none",
         cursor: carregando ? "not-allowed" : "pointer",
-        boxShadow: "0 1px 0 rgba(255,255,255,0.90) inset, 0 6px 20px rgba(120,80,180,0.14)",
+        boxShadow: "0 1px 0 rgba(255,255,255,0.90) inset, 0 6px 20px rgba(120,80,180,0.28)",
         transition: "background 0.2s, transform 0.1s",
         fontFamily: FONT,
         letterSpacing: "0.1px",

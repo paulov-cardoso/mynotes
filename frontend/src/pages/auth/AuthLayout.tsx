@@ -3,6 +3,7 @@ import { motion, useAnimation } from 'framer-motion'
 
 interface AuthLayoutProps {
   children: React.ReactNode
+  rodape?: React.ReactNode
 }
 
 const POSTIT_COLORS_BG = ['#8a8a30', '#FFFF99', '#ce3975', '#af651b', '#a9b529', '#3c7bbf', '#c7637a']
@@ -107,10 +108,42 @@ function CanvasPostits() {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Flag de sessao — marcada ANTES da primeira renderizacao
-// Sobrevive a troca de rotas, reseta apenas no refresh
-// ---------------------------------------------------------------------------
+function PaperFilters() {
+  return (
+    <svg aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
+      <defs>
+        <filter id="paper-envelope" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.60" numOctaves="4" seed="3" stitchTiles="stitch" result="noise" />
+          <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.05 0" in="noise" result="tint" />
+          <feComposite in="tint" in2="SourceGraphic" operator="over" />
+        </filter>
+        <filter id="paper-postit" x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="5" seed="11" stitchTiles="stitch" result="noise" />
+          <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.14 0" in="noise" result="tint" />
+          <feComposite in="tint" in2="SourceGraphic" operator="over" />
+        </filter>
+      </defs>
+    </svg>
+  )
+}
+
+function TexturaOverlay({ filterId, borderRadius = 0 }: { filterId: string; borderRadius?: number }) {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        borderRadius,
+        filter: `url(#${filterId})`,
+        pointerEvents: 'none',
+        zIndex: 10,
+        background: 'rgba(255,255,255,0.01)',
+      }}
+    />
+  )
+}
+
 const ENVELOPE_W = 360
 const ENVELOPE_H = 480
 const CARD_W     = 150
@@ -119,23 +152,14 @@ const CARD_H     = 150
 let _animacaoJaRodou = false
 
 const LEQUE_COLORS = [
-  '#EEAAA9',
-  '#EBC861',
-  '#dcf06b',
-  '#81BB71',
-  '#3FB0D8',
-  '#AB75B3',
-  '#F1902C',
-  '#E84439',
+  '#EEAAA9', '#EBC861', '#dcf06b', '#81BB71',
+  '#3FB0D8', '#AB75B3', '#F1902C', '#E84439',
 ]
 
 const LEQUE_OFFSET  = -1
 const LEQUE_RAIO    = 48
 const LEQUE_ANGULOS = [-1, -30, -52, -72, -89, -105, -119, -132].map(a => a + LEQUE_OFFSET)
 
-// ---------------------------------------------------------------------------
-// PostitsLeque
-// ---------------------------------------------------------------------------
 function PostitsLeque({ jaRodou }: { jaRodou: boolean }) {
   return (
     <motion.div
@@ -170,16 +194,14 @@ function PostitsLeque({ jaRodou }: { jaRodou: boolean }) {
                   rotate:  LEQUE_ANGULOS[i],
                   x: Math.cos((LEQUE_ANGULOS[i] - 90) * Math.PI / 180) * LEQUE_RAIO * i * 0.4,
                   y: Math.sin((LEQUE_ANGULOS[i] - 90) * Math.PI / 180) * LEQUE_RAIO * i * 0.4 - CARD_H * 0.9,
-                  opacity: 1,
-                  scale:   1,
+                  opacity: 1, scale: 1,
                 }
               : { rotate: 0, x: 0, y: 0, opacity: 0, scale: 0.7 },
             show: {
               rotate:  LEQUE_ANGULOS[i],
               x: Math.cos((LEQUE_ANGULOS[i] - 90) * Math.PI / 180) * LEQUE_RAIO * i * 0.4,
               y: Math.sin((LEQUE_ANGULOS[i] - 90) * Math.PI / 180) * LEQUE_RAIO * i * 0.4 - CARD_H * 0.9,
-              opacity: 1,
-              scale:   1,
+              opacity: 1, scale: 1,
               transition: jaRodou
                 ? { duration: 0 }
                 : { type: 'spring', stiffness: 120, damping: 18, mass: 1.1 },
@@ -196,16 +218,16 @@ function PostitsLeque({ jaRodou }: { jaRodou: boolean }) {
             bottom: 0,
             right: 0,
             zIndex: LEQUE_COLORS.length - 1 - i,
+            overflow: 'hidden',
           }}
-        />
+        >
+          <TexturaOverlay filterId="paper-postit" borderRadius={15} />
+        </motion.div>
       ))}
     </motion.div>
   )
 }
 
-// ---------------------------------------------------------------------------
-// AbaEnvelope
-// ---------------------------------------------------------------------------
 function AbaEnvelope({ jaRodou }: { jaRodou: boolean }) {
   return (
     <motion.div
@@ -224,25 +246,23 @@ function AbaEnvelope({ jaRodou }: { jaRodou: boolean }) {
         zIndex: 2,
         pointerEvents: 'none',
         clipPath: 'polygon(0% 0%, 0% 100%, 100% 50%)',
-        background: 'rgba(235,228,245,0.97)',
-        boxShadow: 'inset -2px 0 8px rgba(160,140,200,0.15)',
+        background: 'rgba(228,218,242,0.97)',
+        boxShadow: 'inset -2px 0 8px rgba(140,110,190,0.25)',
         borderRadius: '0px 0 0 16px',
+        overflow: 'hidden',
       }}
-    />
+    >
+      <TexturaOverlay filterId="paper-envelope" />
+    </motion.div>
   )
 }
 
-// ---------------------------------------------------------------------------
-// EnvelopeAnimado
-// ---------------------------------------------------------------------------
 function EnvelopeAnimado({ children }: { children: React.ReactNode }) {
-  // Leitura sincrona antes da renderizacao
   const jaRodou = _animacaoJaRodou
   const controls = useAnimation()
 
   useEffect(() => {
     if (jaRodou) return
-    // Marca imediatamente para que remontagens futuras ja leiam true
     _animacaoJaRodou = true
     controls.start({
       rotate: 0,
@@ -268,15 +288,16 @@ function EnvelopeAnimado({ children }: { children: React.ReactNode }) {
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'rgba(250,248,254,0.98)',
+          background: 'rgba(232,224,245,0.98)',
           borderRadius: '0 16px 16px 0',
-          border: '1px solid rgba(200,185,220,0.50)',
+          border: '1px solid rgba(180,158,210,0.75)',
           boxShadow: [
             '0 2px 0 rgba(255,255,255,0.90) inset',
-            '0 32px 80px rgba(120,80,180,0.16)',
-            '0 4px 20px rgba(0,0,0,0.10)',
+            '0 32px 80px rgba(100,60,170,0.28)',
+            '0 4px 20px rgba(0,0,0,0.14)',
           ].join(', '),
           zIndex: 1,
+          overflow: 'hidden',
         }}
       >
         <svg
@@ -284,15 +305,10 @@ function EnvelopeAnimado({ children }: { children: React.ReactNode }) {
           viewBox={`0 0 ${ENVELOPE_W} ${ENVELOPE_H}`}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
         >
-          <path
-            d={`M 0 ${ENVELOPE_H} L ${ENVELOPE_W * 0.40} ${ENVELOPE_H * 0.50} L ${ENVELOPE_W} ${ENVELOPE_H} Z`}
-            fill="rgba(210,198,228,0.25)"
-          />
-          <path
-            d={`M ${ENVELOPE_W} 0 L ${ENVELOPE_W * 0.60} ${ENVELOPE_H * 0.50} L ${ENVELOPE_W} ${ENVELOPE_H} Z`}
-            fill="rgba(210,198,228,0.18)"
-          />
+          <path d={`M 0 ${ENVELOPE_H} L ${ENVELOPE_W * 0.40} ${ENVELOPE_H * 0.50} L ${ENVELOPE_W} ${ENVELOPE_H} Z`} fill="rgba(190,168,220,0.30)" />
+          <path d={`M ${ENVELOPE_W} 0 L ${ENVELOPE_W * 0.60} ${ENVELOPE_H * 0.50} L ${ENVELOPE_W} ${ENVELOPE_H} Z`} fill="rgba(190,168,220,0.22)" />
         </svg>
+        <TexturaOverlay filterId="paper-envelope" />
       </div>
 
       <AbaEnvelope jaRodou={jaRodou} />
@@ -306,16 +322,17 @@ function EnvelopeAnimado({ children }: { children: React.ReactNode }) {
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'rgba(250,248,254,0.96)',
+          background: 'rgba(245,241,252,0.97)',
           borderRadius: '0 16px 16px 0',
-          border: '1px solid rgba(200,185,220,0.50)',
-          boxShadow: '0 2px 0 rgba(255,255,255,0.90) inset, 0 8px 32px rgba(120,80,180,0.10)',
+          border: '1px solid rgba(180,158,210,0.75)',
+          boxShadow: '0 2px 0 rgba(255,255,255,0.90) inset, 0 8px 32px rgba(100,60,170,0.18)',
           zIndex: 8,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           padding: '36px 32px 32px',
+          overflow: 'hidden',
         }}
       >
         <svg
@@ -323,15 +340,10 @@ function EnvelopeAnimado({ children }: { children: React.ReactNode }) {
           viewBox={`0 0 ${ENVELOPE_W} ${ENVELOPE_H}`}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}
         >
-          <path
-            d={`M 0 ${ENVELOPE_H} L ${ENVELOPE_W * 0.40} ${ENVELOPE_H * 0.50} L ${ENVELOPE_W} ${ENVELOPE_H} Z`}
-            fill="rgba(210,198,228,0.25)"
-          />
-          <path
-            d={`M ${ENVELOPE_W} 0 L ${ENVELOPE_W * 0.60} ${ENVELOPE_H * 0.50} L ${ENVELOPE_W} ${ENVELOPE_H} Z`}
-            fill="rgba(210,198,228,0.18)"
-          />
+          <path d={`M 0 ${ENVELOPE_H} L ${ENVELOPE_W * 0.40} ${ENVELOPE_H * 0.50} L ${ENVELOPE_W} ${ENVELOPE_H} Z`} fill="rgba(190,168,220,0.22)" />
+          <path d={`M ${ENVELOPE_W} 0 L ${ENVELOPE_W * 0.60} ${ENVELOPE_H * 0.50} L ${ENVELOPE_W} ${ENVELOPE_H} Z`} fill="rgba(190,168,220,0.16)" />
         </svg>
+        <TexturaOverlay filterId="paper-envelope" />
         <div style={{ position: 'relative', zIndex: 1, width: '100%', paddingBottom: '40px' }}>
           {children}
         </div>
@@ -340,10 +352,7 @@ function EnvelopeAnimado({ children }: { children: React.ReactNode }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Layout raiz
-// ---------------------------------------------------------------------------
-export function AuthLayout({ children }: AuthLayoutProps) {
+export function AuthLayout({ children, rodape }: AuthLayoutProps) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 1,
@@ -352,11 +361,28 @@ export function AuthLayout({ children }: AuthLayoutProps) {
       alignItems: 'center', justifyContent: 'center',
       padding: '1rem',
     }}>
+      <PaperFilters />
       <CanvasPostits />
 
       <EnvelopeAnimado>
         {children}
       </EnvelopeAnimado>
+
+      {/* Rodapé abaixo do envelope — fora do overflow:hidden */}
+      {rodape && (
+        <div style={{
+          marginTop: '16px',
+          textAlign: 'center',
+          fontSize: '14px',
+          fontWeight: 300,
+          fontFamily: 'Poppins, sans-serif',
+          color: 'rgba(60,20,100,0.70)',
+          zIndex: 10,
+          position: 'relative',
+        }}>
+          {rodape}
+        </div>
+      )}
 
       <footer style={{
         position: 'fixed', bottom: 0, width: '100%',
