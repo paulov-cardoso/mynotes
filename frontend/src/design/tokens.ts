@@ -86,3 +86,40 @@ export const animation = {
 // Tipo utilitário — permite usar os tokens com autocomplete total
 export type Colors = typeof colors;
 export type Typography = typeof typography;
+
+
+export const typography = {
+  fontFamily: {
+    primary: "'Poppins', sans-serif",
+    secondary: "'Work Sans', sans-serif",
+  },
+  fontSize: {
+    xs: "11px",
+    sm: "12px",
+    base: "13px",
+    md: "14px",
+    lg: "16px",
+    xl: "18px",
+    "2xl": "24px",
+  },
+} as const;
+
+export const spacing = {
+  cardGap: 8,
+  cardRadius: 16,
+  panelRadius: 20,
+} as const;
+
+export const blur = {
+  panel: "blur(16px)",
+  nav: "blur(12px)",
+  card: "blur(6px)",
+} as const;
+
+export const animation = {
+  snap: 300,
+  toast: 2500,
+  fade: 120,
+} as const;
+
+export type Typography = typeof typography;
