@@ -79,3 +79,29 @@ export async function apiFetch(
 
   return response
 }
+
+export const api = {
+  async get<T>(path: string): Promise<T> {
+    const res = await apiFetch(path)
+    if (!res.ok) throw new Error(`GET ${path} falhou: ${res.status}`)
+    return res.json()
+  },
+
+  async post<T>(path: string, body: unknown): Promise<T> {
+    const res = await apiFetch(path, { method: 'POST', body: JSON.stringify(body) })
+    if (!res.ok) throw new Error(`POST ${path} falhou: ${res.status}`)
+    return res.json()
+  },
+
+  async put<T>(path: string, body: unknown): Promise<T> {
+    const res = await apiFetch(path, { method: 'PUT', body: JSON.stringify(body) })
+    if (!res.ok) throw new Error(`PUT ${path} falhou: ${res.status}`)
+    return res.json()
+  },
+
+  async delete<T>(path: string): Promise<T> {
+    const res = await apiFetch(path, { method: 'DELETE' })
+    if (!res.ok) throw new Error(`DELETE ${path} falhou: ${res.status}`)
+    return res.json()
+  },
+}

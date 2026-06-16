@@ -16,6 +16,23 @@ model User {
   foto         String?
   tokens       RefreshToken[]
   criadoEm    DateTime       @default(now())
+  notes Note[]
+}
+
+model Note {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  titulo      String
+  tituloCapa  String   @default("")
+  conteudo    String
+  cor         String   @default("#ffffff")
+  imagemCapa  String?
+  clips       Int      @default(0)
+  canvasX     Float    @default(0)
+  canvasY     Float    @default(0)
+  canvasOrdem Int      @default(0)
+  criadoEm   DateTime @default(now())
 }
 
 model RefreshToken {
