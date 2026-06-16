@@ -20,14 +20,9 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  login: (username: string, senha: string) => Promise<void>
-  registrar: (
-    username: string,
-    nomeExibicao: string,
-    email: string,
-    senha: string
-  ) => Promise<void>
-  logout: () => Promise<void>
+  login:    (username: string, senha: string) => Promise<void>
+  registrar: (username: string, nomeExibicao: string, senha: string) => Promise<void>
+  logout:   () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
@@ -73,7 +68,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       tokenStorage.clear()
       setState({ usuario: null, loading: false })
     }
-
     window.addEventListener('auth:logout', handleForceLogout)
     return () => window.removeEventListener('auth:logout', handleForceLogout)
   }, [])
@@ -86,7 +80,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     if (!response.ok) {
       const data = await response.json()
-      throw new Error(data.message ?? 'Erro ao fazer login')
+      throw new Error(data.error ?? 'Erro ao fazer login.')
     }
 
     const data = await response.json()
@@ -94,29 +88,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setState({ usuario: data.usuario, loading: false })
   }, [])
 
-  const registrar = useCallback(
-    async (
-      username: string,
-      nomeExibicao: string,
-      email: string,
-      senha: string
-    ) => {
-      const response = await apiFetch('/auth/registrar', {
-        method: 'POST',
-        body: JSON.stringify({ username, nomeExibicao, email, senha }),
-      })
+  const registrar = useCallback(async (
+    username: string,
+    nomeExibicao: string,
+    senha: string,
+  ) => {
+    const response = await apiFetch('/auth/registrar', {
+      method: 'POST',
+      body: JSON.stringify({ username, nomeExibicao, password1: senha }),
+    })
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.message ?? 'Erro ao registrar')
-      }
-
+    if (!response.ok) {
       const data = await response.json()
-      tokenStorage.set(data.access, data.refresh)
-      setState({ usuario: data.usuario, loading: false })
-    },
-    []
-  )
+      throw new Error(data.error ?? 'Erro ao criar conta.')
+    }
+
+    const data = await response.json()
+    tokenStorage.set(data.access, data.refresh)
+    setState({ usuario: data.usuario, loading: false })
+  }, [])
 
   const logout = useCallback(async () => {
     try {
