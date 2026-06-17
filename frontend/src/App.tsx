@@ -6,6 +6,8 @@ import { RegistrarPage } from './pages/auth/RegistrarPage'
 import { NotesPage } from './pages/NotesPage'
 import type { ReactNode } from 'react'
 import { SenhaResetPage } from './pages/auth/SenhaResetPage'
+import { ThemeProvider } from './contexts/ThemeContext'
+import { Navbar } from './components/Navbar'
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const { usuario, loading } = useAuth()
@@ -37,6 +39,7 @@ function AppRoutes() {
         path="/"
         element={
           <PrivateRoute>
+            <Navbar />
             <NotesPage />
           </PrivateRoute>
         }
@@ -49,9 +52,11 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   )
 }

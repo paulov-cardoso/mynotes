@@ -5,6 +5,7 @@ import {
 import { createPortal } from 'react-dom'
 import { spacing, typography } from '../design/tokens'
 import { api } from '../lib/api'
+import { useTheme } from '../hooks/useTheme'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -975,6 +976,8 @@ export function NotesPage() {
   const [draggingNoteId, setDraggingNoteId] = useState<number | null>(null)
   const [dragPos, setDragPos]               = useState<{ x: number; y: number } | null>(null)
 
+  const { tokens } = useTheme()
+
   useEffect(() => { carregarNotes() }, [])
 
   useEffect(() => {
@@ -1161,15 +1164,15 @@ export function NotesPage() {
   const noteParaConfirm = confirmExcluirId !== null ? notes.find(n => n.id === confirmExcluirId) : null
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 12, background: 'linear-gradient(155deg, #d4b8d4 0%, #e2cde2 45%, #eddaed 100%)' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 12, background: tokens.background.gradient }}>
       <span style={{ fontSize: '2.5rem' }}>📓</span>
-      <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 13, color: '#5b4080' }}>Carregando notes...</p>
+      <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 13, color: tokens.text.secondary }}>Carregando notes...</p>
     </div>
   )
 
   if (erro) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'linear-gradient(155deg, #d4b8d4 0%, #e2cde2 45%, #eddaed 100%)' }}>
-      <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 13, color: '#dc2626' }}>{erro}</p>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: tokens.background.gradient }}>
+      <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 13, color: tokens.danger.text }}>{erro}</p>
     </div>
   )
 
@@ -1202,11 +1205,11 @@ export function NotesPage() {
         ref={containerRef}
         onMouseDown={onMouseDown}
         style={{
-          position: 'fixed', inset: 0,
+          position: 'fixed', top: 56, left: 0, right: 0, bottom: 0,
           overflow: 'hidden',
           cursor: 'grab',
           userSelect: 'none',
-          background: 'linear-gradient(155deg, #d4b8d4 0%, #e2cde2 45%, #eddaed 100%)',
+          background: tokens.background.gradient,
         }}
       >
         {/* Grid de pontos */}
@@ -1349,7 +1352,7 @@ export function NotesPage() {
         </button>
 
         {/* Painel de zoom */}
-        <div style={{ position: 'absolute', bottom: 28, left: 28, zIndex: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+        <div style={{ position: 'absolute', bottom: 100, right: 28, zIndex: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
           {zoomExpanded && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, animation: 'zoomExpand 0.18s ease-out' }}>
               <BotaoZoom label="+" title="Aproximar" onClick={zoomIn} fontSize={20} />
