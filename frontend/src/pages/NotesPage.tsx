@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import { spacing, typography } from '../design/tokens'
 import { api } from '../lib/api'
 import { useTheme } from '../hooks/useTheme'
+import type { ThemeTokens } from '../design/themes'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -182,12 +183,16 @@ interface BotaoZoomProps {
   label: string
   title: string
   onClick: () => void
+  tokens: ThemeTokens
   width?: number
   height?: number
   fontSize?: number
 }
 
-function BotaoZoom({ label, title, onClick, width = 42, height = 42, fontSize = 18 }: BotaoZoomProps) {
+function BotaoZoom({ label, title, onClick, tokens, width = 42, height = 42, fontSize = 18 }: BotaoZoomProps) {
+  const bgNormal = tokens.surface.glass
+  const bgHover  = tokens.surface.glassStrong
+
   return (
     <button
       onClick={onClick}
@@ -195,12 +200,12 @@ function BotaoZoom({ label, title, onClick, width = 42, height = 42, fontSize = 
       style={{
         width, height,
         borderRadius: 999,
-        background: 'rgba(255,255,255,0.55)',
-        border: '1px solid rgba(255,255,255,0.70)',
+        background: bgNormal,
+        border: `1px solid ${tokens.border.subtle}`,
         backdropFilter: 'blur(12px)',
-        boxShadow: '0 2px 10px rgba(120,80,160,0.22)',
+        boxShadow: `0 2px 10px rgba(${tokens.shadowRgb},0.22)`,
         cursor: 'pointer',
-        color: '#5b4080',
+        color: tokens.text.primary,
         fontFamily: typography.fontFamily.primary,
         fontSize,
         fontWeight: 600,
@@ -209,11 +214,12 @@ function BotaoZoom({ label, title, onClick, width = 42, height = 42, fontSize = 
         justifyContent: 'center',
         transition: 'background 0.15s',
       }}
-      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.85)' }}
-      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.55)' }}
+      onMouseEnter={e => { e.currentTarget.style.background = bgHover }}
+      onMouseLeave={e => { e.currentTarget.style.background = bgNormal }}
     >{label}</button>
   )
 }
+
 
 // ─── TexturaCanvas ────────────────────────────────────────────────────────────
 
@@ -373,12 +379,15 @@ function LapisSVG() {
 
 interface CardDropdownProps {
   pos: DropdownPos | null
+  tokens: ThemeTokens
   onExcluir: () => void
   onFechar: () => void
 }
 
-function CardDropdown({ pos, onExcluir, onFechar }: CardDropdownProps) {
+function CardDropdown({ pos, tokens, onExcluir, onFechar }: CardDropdownProps) {
   if (!pos) return null
+
+  const dangerHover = `rgba(${tokens.danger.rgb},0.08)`
 
   const itemStyle = (danger = false): React.CSSProperties => ({
     display: 'flex',
@@ -389,7 +398,7 @@ function CardDropdown({ pos, onExcluir, onFechar }: CardDropdownProps) {
     padding: '6px 12px',
     background: 'transparent',
     border: 'none',
-    color: danger ? '#ef4444' : '#4a3470',
+    color: danger ? tokens.danger.text : tokens.text.primary,
     fontSize: 12,
     fontFamily: typography.fontFamily.primary,
     cursor: 'pointer',
@@ -412,13 +421,13 @@ function CardDropdown({ pos, onExcluir, onFechar }: CardDropdownProps) {
           position: 'fixed',
           top, bottom: bot,
           left: pos.left,
-          background: 'rgba(255,255,255,0.92)',
+          background: tokens.surface.glassStrong,
           backdropFilter: 'blur(16px)',
           borderRadius: 12,
           padding: '5px 4px',
           minWidth: 160,
-          boxShadow: '0 8px 32px rgba(120,80,160,0.25)',
-          border: '1px solid rgba(255,255,255,0.70)',
+          boxShadow: `0 8px 32px rgba(${tokens.shadowRgb},0.25)`,
+          border: `1px solid ${tokens.border.subtle}`,
           zIndex: 9999,
           animation: 'dropdownOpen 0.14s cubic-bezier(0.34,1.56,0.64,1) forwards',
         }}
@@ -427,7 +436,7 @@ function CardDropdown({ pos, onExcluir, onFechar }: CardDropdownProps) {
         <button
           style={itemStyle(true)}
           onClick={e => { e.stopPropagation(); onExcluir(); onFechar() }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = dangerHover }}
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
         >
           <span style={{ fontSize: 12 }}>🗑️</span> Excluir
@@ -438,45 +447,64 @@ function CardDropdown({ pos, onExcluir, onFechar }: CardDropdownProps) {
   )
 }
 
+
 // ─── ModalConfirm ─────────────────────────────────────────────────────────────
 
 interface ModalConfirmProps {
   titulo: string
   descricao: string
   labelConfirmar: string
+  tokens: ThemeTokens
   onConfirmar: () => void
   onCancelar: () => void
 }
 
-function ModalConfirm({ titulo, descricao, labelConfirmar, onConfirmar, onCancelar }: ModalConfirmProps) {
+function ModalConfirm({ titulo, descricao, labelConfirmar, tokens, onConfirmar, onCancelar }: ModalConfirmProps) {
   return (
     <>
       <div
         onClick={onCancelar}
-        style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'rgba(120,80,160,0.12)', backdropFilter: 'blur(10px)' }}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 99998,
+          background: `rgba(${tokens.shadowRgb},0.12)`,
+          backdropFilter: 'blur(10px)',
+        }}
       />
       <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
         <div
           onClick={e => e.stopPropagation()}
           style={{
-            background: 'rgba(255,255,255,0.95)',
+            background: tokens.surface.solid,
             borderRadius: 16, padding: '28px 28px 24px', width: 360,
-            border: '1px solid rgba(255,255,255,0.80)',
-            boxShadow: '0 16px 60px rgba(120,80,160,0.25)',
+            border: `1px solid ${tokens.border.subtle}`,
+            boxShadow: `0 16px 60px rgba(${tokens.shadowRgb},0.25)`,
             animation: 'modalEntrar 0.2s ease-out forwards',
             pointerEvents: 'auto',
           }}
         >
-          <h3 style={{ fontFamily: typography.fontFamily.primary, fontSize: 16, fontWeight: 700, color: '#2d1b5e', margin: '0 0 10px' }}>{titulo}</h3>
-          <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 13, color: '#6b5a8a', margin: '0 0 22px', lineHeight: 1.6 }}>{descricao}</p>
+          <h3 style={{ fontFamily: typography.fontFamily.primary, fontSize: 16, fontWeight: 700, color: tokens.text.primary, margin: '0 0 10px' }}>{titulo}</h3>
+          <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 13, color: tokens.text.secondary, margin: '0 0 22px', lineHeight: 1.6 }}>{descricao}</p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <button
               onClick={onCancelar}
-              style={{ background: 'transparent', border: '1px solid rgba(120,80,160,0.25)', borderRadius: 8, color: '#6b5a8a', padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontFamily: typography.fontFamily.primary }}
+              style={{
+                background: 'transparent',
+                border: `1px solid ${tokens.border.strong}`,
+                borderRadius: 8,
+                color: tokens.text.secondary,
+                padding: '8px 16px', cursor: 'pointer',
+                fontSize: 13, fontFamily: typography.fontFamily.primary,
+              }}
             >Cancelar</button>
             <button
               onClick={onConfirmar}
-              style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.30)', borderRadius: 8, color: '#dc2626', padding: '8px 20px', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: typography.fontFamily.primary }}
+              style={{
+                background: `rgba(${tokens.danger.rgb},0.10)`,
+                border: `1px solid rgba(${tokens.danger.rgb},0.30)`,
+                borderRadius: 8, color: tokens.danger.text,
+                padding: '8px 20px', cursor: 'pointer',
+                fontSize: 13, fontWeight: 700, fontFamily: typography.fontFamily.primary,
+              }}
             >{labelConfirmar}</button>
           </div>
         </div>
@@ -485,18 +513,22 @@ function ModalConfirm({ titulo, descricao, labelConfirmar, onConfirmar, onCancel
   )
 }
 
+
 // ─── OpcaoDropdown ────────────────────────────────────────────────────────────
 
 interface OpcaoDropdownProps {
   emoji: string
   label: string
   desc: string
+  tokens: ThemeTokens
   onClick: () => void
   danger?: boolean
 }
 
-function OpcaoDropdown({ emoji, label, desc, onClick, danger }: OpcaoDropdownProps) {
+function OpcaoDropdown({ emoji, label, desc, tokens, onClick, danger }: OpcaoDropdownProps) {
   const [hover, setHover] = useState(false)
+  const bgHover = `rgba(${tokens.shadowRgb},0.07)`
+
   return (
     <button
       onClick={onClick}
@@ -504,16 +536,17 @@ function OpcaoDropdown({ emoji, label, desc, onClick, danger }: OpcaoDropdownPro
       onMouseLeave={() => setHover(false)}
       style={{
         display: 'flex', flexDirection: 'column', width: '100%', textAlign: 'left',
-        background: hover ? 'rgba(120,80,160,0.07)' : 'transparent',
+        background: hover ? bgHover : 'transparent',
         border: 'none', borderRadius: 10, padding: '8px 10px',
         cursor: 'pointer', transition: 'background 0.15s', gap: 1,
       }}
     >
-      <span style={{ fontFamily: typography.fontFamily.primary, fontSize: 13, fontWeight: 600, color: danger ? '#dc2626' : '#2d1b5e' }}>{emoji} {label}</span>
-      <span style={{ fontFamily: typography.fontFamily.primary, fontSize: 11, color: danger ? 'rgba(220,38,38,0.6)' : '#6b5a8a', paddingLeft: 22 }}>{desc}</span>
+      <span style={{ fontFamily: typography.fontFamily.primary, fontSize: 13, fontWeight: 600, color: danger ? tokens.danger.text : tokens.text.primary }}>{emoji} {label}</span>
+      <span style={{ fontFamily: typography.fontFamily.primary, fontSize: 11, color: danger ? `rgba(${tokens.danger.rgb},0.6)` : tokens.text.secondary, paddingLeft: 22 }}>{desc}</span>
     </button>
   )
 }
+
 
 // ─── PostIt ───────────────────────────────────────────────────────────────────
 
@@ -527,6 +560,7 @@ interface PostItProps {
   isNew: boolean
   dropdownAberto: boolean
   zoom: number
+  tokens: ThemeTokens
   onAbrir: () => void
   onDragStart: (e: ReactMouseEvent) => void
   onDropdownToggle: (e: ReactMouseEvent) => void
@@ -536,7 +570,7 @@ interface PostItProps {
 
 function PostIt({
   note, posX, posY, isDragging, isSnapBack, destacado, isNew,
-  dropdownAberto, zoom,
+  dropdownAberto, zoom, tokens,
   onAbrir, onDragStart, onDropdownToggle, onExcluir, onDropdownFechar,
 }: PostItProps) {
   const temFoto    = Boolean(note.imagemCapa)
@@ -584,10 +618,10 @@ function PostIt({
         ...bgStyle,
         borderRadius: 12,
         boxShadow: isDragging
-          ? '0 20px 48px rgba(120,80,160,0.35)'
+          ? `0 20px 48px rgba(${tokens.shadowRgb},0.35)`
           : destacado
             ? '0 0 0 3px #a78bfa, 0 8px 32px rgba(167,139,250,0.45)'
-            : '0 4px 16px rgba(120,80,160,0.18)',
+            : `0 4px 16px rgba(${tokens.shadowRgb},0.18)`,
         cursor: isDragging ? 'grabbing' : 'grab',
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
@@ -646,7 +680,7 @@ function PostIt({
           width: 26, height: 26, borderRadius: '50%',
           background: 'rgba(0,0,0,0.12)', border: 'none',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: temFoto ? '#fff' : isEscuro(note.cor) ? '#fff' : '#4a3470',
+          color: temFoto ? '#fff' : isEscuro(note.cor) ? '#fff' : tokens.text.primary,
           fontSize: 15, zIndex: 10,
           transition: 'background 0.15s',
         }}
@@ -657,6 +691,7 @@ function PostIt({
       {dropdownAberto && dropdownPos && (
         <CardDropdown
           pos={dropdownPos}
+          tokens={tokens}
           onExcluir={onExcluir}
           onFechar={onDropdownFechar}
         />
@@ -665,15 +700,17 @@ function PostIt({
   )
 }
 
+
 // ─── ModalLeitura ─────────────────────────────────────────────────────────────
 
 interface ModalLeituraProps {
   note: Note
+  tokens: ThemeTokens
   onFechar: () => void
   onExcluido: (id: number) => void
 }
 
-function ModalLeitura({ note, onFechar, onExcluido }: ModalLeituraProps) {
+function ModalLeitura({ note, tokens, onFechar, onExcluido }: ModalLeituraProps) {
   const [dropdownAberto, setDropdownAberto] = useState(false)
   const [confirmExcluir, setConfirmExcluir] = useState(false)
   const temFoto     = Boolean(note.imagemCapa)
@@ -700,7 +737,14 @@ function ModalLeitura({ note, onFechar, onExcluido }: ModalLeituraProps) {
 
   return (
     <>
-      <div onClick={onFechar} style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'rgba(120,80,160,0.12)', backdropFilter: 'blur(10px)' }} />
+      <div
+        onClick={onFechar}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 99998,
+          background: `rgba(${tokens.shadowRgb},0.12)`,
+          backdropFilter: 'blur(10px)',
+        }}
+      />
       <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, pointerEvents: 'none' }}>
         <div
           onClick={e => e.stopPropagation()}
@@ -708,7 +752,7 @@ function ModalLeitura({ note, onFechar, onExcluido }: ModalLeituraProps) {
             background: bg, borderRadius: 20,
             width: '100%', maxWidth: 580, maxHeight: '85vh',
             overflow: 'hidden', display: 'flex', flexDirection: 'column',
-            boxShadow: '0 32px 80px rgba(120,80,160,0.35)',
+            boxShadow: `0 32px 80px rgba(${tokens.shadowRgb},0.35)`,
             animation: 'modalEntrar 0.22s ease-out forwards',
             pointerEvents: 'auto',
             border: '1px solid rgba(255,255,255,0.25)',
@@ -738,16 +782,20 @@ function ModalLeitura({ note, onFechar, onExcluido }: ModalLeituraProps) {
               {dropdownAberto && (
                 <div style={{
                   position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-                  background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255,255,255,0.80)', borderRadius: 14,
+                  background: tokens.surface.solid,
+                  backdropFilter: 'blur(20px)',
+                  border: `1px solid ${tokens.border.subtle}`,
+                  borderRadius: 14,
                   padding: 8, minWidth: 220,
-                  boxShadow: '0 12px 40px rgba(120,80,160,0.25)', zIndex: 10,
+                  boxShadow: `0 12px 40px rgba(${tokens.shadowRgb},0.25)`,
+                  zIndex: 10,
                   animation: 'dropdownOpen 0.18s ease-out forwards',
                 }}>
                   <OpcaoDropdown
                     emoji="🗑️"
                     label="Excluir note"
                     desc="Remove permanentemente"
+                    tokens={tokens}
                     onClick={() => { setDropdownAberto(false); setConfirmExcluir(true) }}
                     danger
                   />
@@ -785,6 +833,7 @@ function ModalLeitura({ note, onFechar, onExcluido }: ModalLeituraProps) {
           titulo="Excluir note?"
           descricao="Este note sera removido permanentemente. Esta acao nao pode ser desfeita."
           labelConfirmar="Excluir"
+          tokens={tokens}
           onConfirmar={excluir}
           onCancelar={() => setConfirmExcluir(false)}
         />
@@ -793,22 +842,24 @@ function ModalLeitura({ note, onFechar, onExcluido }: ModalLeituraProps) {
   )
 }
 
+
 // ─── ComposerModal ────────────────────────────────────────────────────────────
 
 interface ComposerModalProps {
   notes: Note[]
   blocos: Bloco[]
+  tokens: ThemeTokens
   onFechar: () => void
   onCriado: (note: Note) => void
 }
 
-function ComposerModal({ notes, blocos, onFechar, onCriado }: ComposerModalProps) {
-  const [titulo, setTitulo]           = useState('')
-  const [conteudo, setConteudo]       = useState('')
-  const [corBase, setCorBase]         = useState<string | null>(null)
+function ComposerModal({ notes, blocos, tokens, onFechar, onCriado }: ComposerModalProps) {
+  const [titulo, setTitulo]             = useState('')
+  const [conteudo, setConteudo]         = useState('')
+  const [corBase, setCorBase]           = useState<string | null>(null)
   const [luminosidade, setLuminosidade] = useState(0.45)
-  const [erro, setErro]               = useState('')
-  const [salvando, setSalvando]       = useState(false)
+  const [erro, setErro]                 = useState('')
+  const [salvando, setSalvando]         = useState(false)
   const sliderRef  = useRef<HTMLDivElement>(null)
   const arrastando = useRef(false)
 
@@ -860,11 +911,11 @@ function ComposerModal({ notes, blocos, onFechar, onCriado }: ComposerModalProps
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(120,80,160,0.12)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      style={{ position: 'fixed', inset: 0, zIndex: 99999, background: `rgba(${tokens.shadowRgb},0.12)`, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
       onClick={onFechar}
     >
       <div
-        style={{ background: corFinal, borderRadius: 16, width: '100%', maxWidth: 500, boxShadow: '0 24px 64px rgba(120,80,160,0.35)', overflow: 'hidden', transition: 'background 0.25s', border: '1px solid rgba(255,255,255,0.50)' }}
+        style={{ background: corFinal, borderRadius: 16, width: '100%', maxWidth: 500, boxShadow: `0 24px 64px rgba(${tokens.shadowRgb},0.35)`, overflow: 'hidden', transition: 'background 0.25s', border: '1px solid rgba(255,255,255,0.50)' }}
         onClick={e => e.stopPropagation()}
       >
         <div style={{ padding: 24 }}>
@@ -923,7 +974,7 @@ function ComposerModal({ notes, blocos, onFechar, onCriado }: ComposerModalProps
             )}
           </div>
 
-          {erro && <p style={{ color: '#dc2626', fontSize: 12, fontFamily: typography.fontFamily.primary, marginBottom: 12 }}>{erro}</p>}
+          {erro && <p style={{ color: tokens.danger.text, fontSize: 12, fontFamily: typography.fontFamily.primary, marginBottom: 12 }}>{erro}</p>}
           <div style={{ display: 'flex', gap: 10 }}>
             <button
               onClick={onFechar}
@@ -932,7 +983,7 @@ function ComposerModal({ notes, blocos, onFechar, onCriado }: ComposerModalProps
             <button
               onClick={salvar}
               disabled={salvando}
-              style={{ flex: 1, padding: 10, borderRadius: 8, background: 'rgba(120,80,160,0.15)', border: '1.5px solid rgba(120,80,160,0.40)', cursor: 'pointer', fontFamily: typography.fontFamily.primary, fontSize: 13, fontWeight: 700, color: fundoEscuro ? 'white' : '#5b4080', opacity: salvando ? 0.6 : 1 }}
+              style={{ flex: 1, padding: 10, borderRadius: 8, background: `rgba(${tokens.shadowRgb},0.15)`, border: `1.5px solid ${tokens.accent.solid}`, cursor: 'pointer', fontFamily: typography.fontFamily.primary, fontSize: 13, fontWeight: 700, color: fundoEscuro ? 'white' : tokens.text.primary, opacity: salvando ? 0.6 : 1 }}
             >
               {salvando ? 'Salvando...' : 'Salvar Note'}
             </button>
@@ -943,7 +994,9 @@ function ComposerModal({ notes, blocos, onFechar, onCriado }: ComposerModalProps
   )
 }
 
+
 // ─── NotesPage ────────────────────────────────────────────────────────────────
+
 
 export function NotesPage() {
   const [notes, setNotes]                   = useState<Note[]>([])
@@ -963,13 +1016,13 @@ export function NotesPage() {
   const [zoom, setZoom] = useState(ZOOM_DEFAULT)
   const [zoomExpanded, setZoomExpanded] = useState(false)
 
-  const [busca, setBusca]                   = useState('')
-  const [buscaExpanded, setBuscaExpanded]   = useState(false)
+  const [busca, setBusca]                 = useState('')
+  const [buscaExpanded, setBuscaExpanded] = useState(false)
   const buscaInputRef = useRef<HTMLInputElement>(null)
 
-  const containerRef  = useRef<HTMLDivElement>(null)
-  const panRef        = useRef(false)
-  const panStart      = useRef({ x: 0, y: 0, camX: 0, camY: 0 })
+  const containerRef = useRef<HTMLDivElement>(null)
+  const panRef       = useRef(false)
+  const panStart     = useRef({ x: 0, y: 0, camX: 0, camY: 0 })
 
   const dragNoteRef   = useRef<{ id: number; startMouseX: number; startMouseY: number; startCardX: number; startCardY: number } | null>(null)
   const dragOriginRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -977,6 +1030,13 @@ export function NotesPage() {
   const [dragPos, setDragPos]               = useState<{ x: number; y: number } | null>(null)
 
   const { tokens } = useTheme()
+
+  const pillBgCollapsed = tokens.surface.glass
+  const pillBgExpanded  = tokens.surface.glassStrong
+  const fabShadowNormal = `0 4px 16px rgba(${tokens.shadowRgb},0.40)`
+  const fabShadowHover  = `0 6px 24px rgba(${tokens.shadowRgb},0.55)`
+  const zoomBtnAtivo    = tokens.accent.solid
+  const zoomBtnInativo  = tokens.surface.glass
 
   useEffect(() => { carregarNotes() }, [])
 
@@ -1072,17 +1132,18 @@ export function NotesPage() {
     }
   }, [zoom, dragPos, notes, blocos])
 
-  const onWheel = useCallback((e: WheelEvent) => {
-    e.preventDefault()
-    setZoom(prev => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, prev + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP))))
-  }, [])
+const onWheel = useCallback((e: WheelEvent) => {
+  e.preventDefault()
+  e.stopPropagation()
+  setZoom(prev => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, +(prev + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP)).toFixed(2))))
+}, [])
 
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
-  }, [onWheel])
+useEffect(() => {
+  const el = containerRef.current
+  if (!el) return
+  el.addEventListener('wheel', onWheel, { passive: false })
+  return () => el.removeEventListener('wheel', onWheel)
+}, [onWheel, containerRef.current])
 
   function zoomIn()    { setZoom(z => Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(2))) }
   function zoomOut()   { setZoom(z => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(2))) }
@@ -1126,7 +1187,11 @@ export function NotesPage() {
     setNewNoteId(note.id)
     setTimeout(() => {
       navegarAteNote(note)
-      setTimeout(() => setNewNoteId(null), 600)
+      setTimeout(() => {
+        setNewNoteId(null)
+        setDestacado(note.id)
+        setTimeout(() => setDestacado(null), 2000)
+      }, 400)
     }, 80)
   }
 
@@ -1181,7 +1246,7 @@ export function NotesPage() {
       <style>{`
         @keyframes destacarCard {
           0%,100% { box-shadow: 0 4px 16px rgba(120,80,160,0.18); }
-          30%,60%  { box-shadow: 0 0 0 3px #a78bfa, 0 8px 32px rgba(167,139,250,0.45); }
+          30%,60%  { box-shadow: 0 0 0 4px #f59e0b, 0 8px 32px rgba(245,158,11,0.55); }
         }
         @keyframes modalEntrar {
           from { opacity: 0; transform: scale(0.96) translateY(8px); }
@@ -1253,6 +1318,7 @@ export function NotesPage() {
                 isNew={newNoteId === note.id}
                 dropdownAberto={dropdownCardId === note.id}
                 zoom={zoom}
+                tokens={tokens}
                 onAbrir={() => setNoteLendo(note)}
                 onDragStart={e => iniciarDragNote(e, note)}
                 onDropdownToggle={e => {
@@ -1269,11 +1335,11 @@ export function NotesPage() {
         {/* Pill de busca */}
         <div style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 60 }}>
           <div style={{
-            background: buscaExpanded ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.50)',
+            background: buscaExpanded ? pillBgExpanded : pillBgCollapsed,
             backdropFilter: 'blur(16px)',
             borderRadius: buscaExpanded ? 14 : 999,
-            border: '1px solid rgba(255,255,255,0.65)',
-            boxShadow: buscaExpanded ? '0 8px 28px rgba(120,80,160,0.20)' : 'none',
+            border: `1px solid ${tokens.border.subtle}`,
+            boxShadow: buscaExpanded ? `0 8px 28px rgba(${tokens.shadowRgb},0.20)` : 'none',
             transition: 'border-radius 0.2s, background 0.2s, box-shadow 0.2s',
             minWidth: buscaExpanded ? 340 : undefined,
           }}>
@@ -1289,21 +1355,21 @@ export function NotesPage() {
                     placeholder="Buscar notes..."
                     value={busca}
                     onChange={e => setBusca(e.target.value)}
-                    style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontFamily: typography.fontFamily.primary, fontSize: 13, color: '#4a3470', padding: '11px 0', minWidth: 260 }}
+                    style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontFamily: typography.fontFamily.primary, fontSize: 13, color: tokens.text.primary, padding: '11px 0', minWidth: 260 }}
                   />
-                : <span style={{ fontFamily: typography.fontFamily.primary, fontSize: 12, color: '#5b4080', opacity: 0.7 }}>procurar notes</span>
+                : <span style={{ fontFamily: typography.fontFamily.primary, fontSize: 12, color: tokens.text.secondary, opacity: 0.7 }}>procurar notes</span>
               }
               {buscaExpanded && (
-                <button onClick={toggleBusca} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5b4080', opacity: 0.5, fontSize: 14, padding: '0 0 0 4px' }}>✕</button>
+                <button onClick={toggleBusca} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tokens.text.secondary, opacity: 0.5, fontSize: 14, padding: '0 0 0 4px' }}>✕</button>
               )}
             </div>
 
             {buscaExpanded && busca && (
-              <div style={{ borderTop: '1px solid rgba(120,80,160,0.10)' }}>
+              <div style={{ borderTop: `1px solid rgba(${tokens.shadowRgb},0.10)` }}>
                 {resultadosBusca.length === 0
-                  ? <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 12, color: '#6b5a8a', padding: '12px 14px', margin: 0 }}>Nenhum resultado para "{busca}"</p>
+                  ? <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 12, color: tokens.text.secondary, padding: '12px 14px', margin: 0 }}>Nenhum resultado para "{busca}"</p>
                   : <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-                      <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 10, color: '#8b7aaa', padding: '8px 14px 4px', margin: 0, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 10, color: tokens.text.muted, padding: '8px 14px 4px', margin: 0, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                         {resultadosBusca.length} resultado{resultadosBusca.length > 1 ? 's' : ''}
                       </p>
                       {resultadosBusca.map(n => {
@@ -1315,12 +1381,12 @@ export function NotesPage() {
                           <button
                             key={n.id}
                             onMouseDown={() => navegarAteNote(n)}
-                            style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 14px', borderTop: '1px solid rgba(120,80,160,0.06)', transition: 'background 0.15s' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(120,80,160,0.06)' }}
+                            style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 14px', borderTop: `1px solid rgba(${tokens.shadowRgb},0.06)`, transition: 'background 0.15s' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = `rgba(${tokens.shadowRgb},0.06)` }}
                             onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
                           >
-                            <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 12, fontWeight: 600, color: '#2d1b5e', margin: '0 0 2px' }}>{n.tituloCapa || n.titulo}</p>
-                            <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 11, color: '#8b7aaa', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trecho}</p>
+                            <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 12, fontWeight: 600, color: tokens.text.primary, margin: '0 0 2px' }}>{n.tituloCapa || n.titulo}</p>
+                            <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 11, color: tokens.text.muted, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trecho}</p>
                           </button>
                         )
                       })}
@@ -1337,15 +1403,16 @@ export function NotesPage() {
           style={{
             position: 'absolute', bottom: 28, right: 28,
             height: 44, borderRadius: 999,
-            background: 'linear-gradient(135deg, #9b7bc4 0%, #c79bd1 100%)',
+            background: tokens.accent.gradientFab,
             border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px',
-            boxShadow: '0 4px 16px rgba(120,80,160,0.40)',
+            boxShadow: fabShadowNormal,
             zIndex: 60, transition: 'transform 0.2s, box-shadow 0.2s',
-            fontFamily: typography.fontFamily.primary, fontSize: 13, fontWeight: 600, color: 'white',
+            fontFamily: typography.fontFamily.primary, fontSize: 13, fontWeight: 600,
+            color: tokens.accent.onAccent,
           }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(120,80,160,0.55)' }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(120,80,160,0.40)' }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = fabShadowHover }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = fabShadowNormal }}
         >
           <LapisSVG />
           Criar novo note
@@ -1355,9 +1422,9 @@ export function NotesPage() {
         <div style={{ position: 'absolute', bottom: 100, right: 28, zIndex: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
           {zoomExpanded && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, animation: 'zoomExpand 0.18s ease-out' }}>
-              <BotaoZoom label="+" title="Aproximar" onClick={zoomIn} fontSize={20} />
-              <BotaoZoom label={`${Math.round(zoom * 100)}%`} title="Restaurar zoom" onClick={zoomReset} width={56} height={32} fontSize={11} />
-              <BotaoZoom label="-" title="Afastar" onClick={zoomOut} fontSize={20} />
+              <BotaoZoom label="+" title="Aproximar" onClick={zoomIn} tokens={tokens} fontSize={20} />
+              <BotaoZoom label={`${Math.round(zoom * 100)}%`} title="Restaurar zoom" onClick={zoomReset} tokens={tokens} width={56} height={32} fontSize={11} />
+              <BotaoZoom label="-" title="Afastar" onClick={zoomOut} tokens={tokens} fontSize={20} />
             </div>
           )}
           <button
@@ -1365,10 +1432,10 @@ export function NotesPage() {
             title="Controles de zoom"
             style={{
               width: 42, height: 42, borderRadius: '50%',
-              background: zoomExpanded ? 'rgba(155,123,196,0.85)' : 'rgba(255,255,255,0.55)',
-              border: '1px solid rgba(255,255,255,0.70)',
+              background: zoomExpanded ? zoomBtnAtivo : zoomBtnInativo,
+              border: `1px solid ${tokens.border.subtle}`,
               backdropFilter: 'blur(12px)',
-              boxShadow: '0 2px 10px rgba(120,80,160,0.22)',
+              boxShadow: `0 2px 10px rgba(${tokens.shadowRgb},0.22)`,
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 20, transition: 'background 0.2s',
             }}
@@ -1380,6 +1447,7 @@ export function NotesPage() {
         <ComposerModal
           notes={notes}
           blocos={blocos}
+          tokens={tokens}
           onFechar={() => setComposerAberto(false)}
           onCriado={onNoteCriado}
         />
@@ -1388,6 +1456,7 @@ export function NotesPage() {
       {noteLendo && (
         <ModalLeitura
           note={noteLendo}
+          tokens={tokens}
           onFechar={() => setNoteLendo(null)}
           onExcluido={onNoteExcluido}
         />
@@ -1398,6 +1467,7 @@ export function NotesPage() {
           titulo="Excluir note?"
           descricao={`O note "${noteParaConfirm.titulo}" sera removido permanentemente. Esta acao nao pode ser desfeita.`}
           labelConfirmar="Excluir"
+          tokens={tokens}
           onConfirmar={() => excluirNote(confirmExcluirId)}
           onCancelar={() => setConfirmExcluirId(null)}
         />
@@ -1405,3 +1475,4 @@ export function NotesPage() {
     </>
   )
 }
+
