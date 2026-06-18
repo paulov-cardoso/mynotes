@@ -1041,6 +1041,12 @@ export function NotesPage() {
   useEffect(() => { carregarNotes() }, [])
 
   useEffect(() => {
+    function handler() { setComposerAberto(true) }
+    window.addEventListener('notes:abrirComposer', handler)
+    return () => window.removeEventListener('notes:abrirComposer', handler)
+  }, [])
+
+  useEffect(() => {
     if (buscaExpanded) buscaInputRef.current?.focus()
   }, [buscaExpanded])
 
@@ -1333,7 +1339,7 @@ useEffect(() => {
         </div>
 
         {/* Pill de busca */}
-        <div style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 60 }}>
+        <div style={{ position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)', zIndex: 60 }}>
           <div style={{
             background: buscaExpanded ? pillBgExpanded : pillBgCollapsed,
             backdropFilter: 'blur(16px)',

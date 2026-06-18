@@ -81,6 +81,10 @@ export function Navbar() {
     setTheme(theme === destino ? 'pastel' : destino)
   }
 
+  function abrirComposer() {
+    window.dispatchEvent(new CustomEvent('notes:abrirComposer'))
+  }
+
   return (
     <nav
       style={{
@@ -99,10 +103,13 @@ export function Navbar() {
       <img
         src="/mynotes_logo.png"
         alt="Mynotes"
-        style={{ height: 32, width: 'auto', objectFit: 'contain' }}
+        style={{ height: 100, width: 'auto', objectFit: 'contain' }}
       />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+        <ToggleTema label="Dark mode"  ativo={theme === 'darkmode'}  tokens={tokens} onToggle={() => alternarTema('darkmode')} />
+        <ToggleTema label="Color mode" ativo={theme === 'colormode'} tokens={tokens} onToggle={() => alternarTema('colormode')} />
+
         {usuario && (
           <span style={{
             fontFamily: typography.fontFamily.primary,
@@ -113,8 +120,25 @@ export function Navbar() {
           </span>
         )}
 
-        <ToggleTema label="Dark mode"  ativo={theme === 'darkmode'}  tokens={tokens} onToggle={() => alternarTema('darkmode')} />
-        <ToggleTema label="Color mode" ativo={theme === 'colormode'} tokens={tokens} onToggle={() => alternarTema('colormode')} />
+        <button
+          onClick={abrirComposer}
+          style={{
+            background: 'rgba(255,255,255,0.15)',
+            border: '1px solid rgba(255,255,255,0.30)',
+            borderRadius: 999,
+            color: NAV_TEXT_PRIMARY,
+            padding: '6px 16px',
+            fontSize: 13,
+            fontWeight: 600,
+            fontFamily: typography.fontFamily.primary,
+            cursor: 'pointer',
+            transition: 'background 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.25)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)' }}
+        >
+          Tenha uma ideia
+        </button>
 
         <button
           onClick={handleLogout}

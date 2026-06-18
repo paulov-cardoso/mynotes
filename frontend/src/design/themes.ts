@@ -113,7 +113,7 @@ const colormode: ThemeTokens = {
 const darkmode: ThemeTokens = {
   background: {
     gradient: "linear-gradient(155deg, #000000 0%, #0d0d0d 50%, #000000 100%)",
-    navGradient: "linear-gradient(155deg, #000000 0%, #050505 50%, #000000 100%)",
+    navGradient: "linear-gradient(155deg, #0d0820 0%, #1a0d33 40%, #240f28 70%, #35110c 100%)",
   },
   surface: {
     glass: "rgba(255,255,255,0.08)",
