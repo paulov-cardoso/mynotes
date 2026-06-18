@@ -3,7 +3,8 @@
 Aplicação fullstack de notas privadas em formato de post-its em canvas infinito. Projeto portfólio construído do zero com stack moderna de mercado.
 
 ![Demo](./docs/demo.png)
-> _Screenshot será adicionado em breve_
+<img width="1888" height="945" alt="image" src="https://github.com/user-attachments/assets/e2716799-dbf0-4397-9d60-a415a123b188" />
+
 
 ---
 
