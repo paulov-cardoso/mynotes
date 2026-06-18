@@ -304,9 +304,10 @@ interface CardBoasVindasProps {
   camY: number
   zoom: number
   containerRef: RefObject<HTMLDivElement | null>
+  tokens: ThemeTokens
 }
 
-function CardBoasVindas({ camX, camY, zoom, containerRef }: CardBoasVindasProps) {
+function CardBoasVindas({ camX, camY, zoom, containerRef, tokens }: CardBoasVindasProps) {
   const container = containerRef.current
   const viewW = container ? container.getBoundingClientRect().width  : window.innerWidth
   const viewH = container ? container.getBoundingClientRect().height : window.innerHeight
@@ -323,7 +324,7 @@ function CardBoasVindas({ camX, camY, zoom, containerRef }: CardBoasVindasProps)
         width: CARD_W,
         height: CARD_H,
         borderRadius: spacing.cardRadius,
-        background: 'linear-gradient(155deg, #9b7bc4 0%, #c79bd1 45%, #f0c9a8 100%)',
+        background: tokens.background.navGradient,
         border: '1px solid rgba(255,255,255,0.35)',
         boxShadow: '0 12px 36px rgba(120,80,160,0.35)',
         display: 'flex',
@@ -1306,7 +1307,7 @@ useEffect(() => {
           }}
         >
           {notes.length === 0 && (
-            <CardBoasVindas camX={camX} camY={camY} zoom={zoom} containerRef={containerRef} />
+            <CardBoasVindas camX={camX} camY={camY} zoom={zoom} containerRef={containerRef} tokens={tokens} />
           )}
 
           {notesVisiveis.map(note => {
