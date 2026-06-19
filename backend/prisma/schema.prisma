@@ -17,6 +17,7 @@ model User {
   tokens       RefreshToken[]
   criadoEm    DateTime       @default(now())
   notes Note[]
+  blocos Bloco[]
 }
 
 model Note {
@@ -43,4 +44,16 @@ model RefreshToken {
   revogado Boolean  @default(false)
   expiraEm DateTime
   criadoEm DateTime @default(now())
+}
+
+model Bloco {
+  id           Int      @id @default(autoincrement())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nome         String
+  cardIds      Int[]    @default([])
+  canvasX      Float    @default(0)
+  canvasY      Float    @default(0)
+  canvasOrdem  Int      @default(0)
+  criadoEm    DateTime @default(now())
 }

@@ -1,0 +1,16 @@
+-- CreateTable
+CREATE TABLE "Bloco" (
+    "id" SERIAL NOT NULL,
+    "userId" TEXT NOT NULL,
+    "nome" TEXT NOT NULL,
+    "cardIds" INTEGER[] DEFAULT ARRAY[]::INTEGER[],
+    "canvasX" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "canvasY" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "canvasOrdem" INTEGER NOT NULL DEFAULT 0,
+    "criadoEm" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Bloco_pkey" PRIMARY KEY ("id")
+);
+
+-- AddForeignKey
+ALTER TABLE "Bloco" ADD CONSTRAINT "Bloco_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

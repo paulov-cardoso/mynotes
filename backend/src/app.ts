@@ -3,6 +3,7 @@ import cors from "cors";
 import { logger } from "./lib/logger";
 import { authRouter } from "./routes/auth.routes";
 import notesRoutes from "./routes/notes.routes";
+import blocosRoutes from './routes/blocos.routes'
 
 const app = express();
 
@@ -20,5 +21,6 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/notes", notesRoutes);
+app.use('/api/blocos', blocosRoutes)
 
 export { app };
