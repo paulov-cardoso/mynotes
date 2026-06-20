@@ -26,6 +26,8 @@ export async function criarNote(req: AuthRequest, res: Response) {
     return
   }
 
+  const imagemCapa = req.file ? `/uploads/notes/${req.file.filename}` : null
+
   const note = await prisma.note.create({
     data: {
       userId,
@@ -33,9 +35,10 @@ export async function criarNote(req: AuthRequest, res: Response) {
       tituloCapa: tituloCapa?.trim() ?? '',
       conteudo: conteudo.trim(),
       cor: cor ?? '#ffffff',
-      canvasX: canvasX ?? 0,
-      canvasY: canvasY ?? 0,
-      canvasOrdem: canvasOrdem ?? 0,
+      imagemCapa,
+      canvasX: canvasX != null ? Number(canvasX) : 0,
+      canvasY: canvasY != null ? Number(canvasY) : 0,
+      canvasOrdem: canvasOrdem != null ? Number(canvasOrdem) : 0,
     },
   })
 

@@ -4,6 +4,7 @@ import { logger } from "./lib/logger";
 import { authRouter } from "./routes/auth.routes";
 import notesRoutes from "./routes/notes.routes";
 import blocosRoutes from './routes/blocos.routes'
+import path from 'path'
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/notes", notesRoutes);
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 app.use('/api/blocos', blocosRoutes)
 
 export { app };
