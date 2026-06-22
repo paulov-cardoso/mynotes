@@ -87,8 +87,9 @@ export const api = {
     return res.json()
   },
 
-  async post<T>(path: string, body: unknown): Promise<T> {
-    const res = await apiFetch(path, { method: 'POST', body: JSON.stringify(body) })
+ async post<T>(path: string, body: unknown): Promise<T> {
+    const ehFormData = body instanceof FormData
+    const res = await apiFetch(path, { method: 'POST', body: ehFormData ? body : JSON.stringify(body) })
     if (!res.ok) throw new Error(`POST ${path} falhou: ${res.status}`)
     return res.json()
   },

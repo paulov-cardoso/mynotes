@@ -752,7 +752,6 @@ function ModalLeitura({ note, tokens, onFechar, onExcluido }: ModalLeituraProps)
 }
 
 // ─── ComposerModal ────────────────────────────────────────────────────────────
-
 interface ComposerModalProps {
   notes: Note[]; blocos: Bloco[]; tokens: ThemeTokens; onFechar: () => void; onCriado: (note: Note) => void
 }
@@ -766,6 +765,10 @@ function ComposerModal({ notes, blocos, tokens, onFechar, onCriado }: ComposerMo
   const [salvando, setSalvando]         = useState(false)
   const sliderRef  = useRef<HTMLDivElement>(null)
   const arrastando = useRef(false)
+
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null)
+  const [fotoArquivo, setFotoArquivo] = useState<File | null>(null)
+  const inputFotoRef = useRef<HTMLInputElement>(null)
 
   const corFinal    = corBase ? ajustarLuminosidade(corBase, luminosidade) : '#ffffff'
   const fundoEscuro = luminosidade < 0.55 && corBase !== null
@@ -789,21 +792,58 @@ function ComposerModal({ notes, blocos, tokens, onFechar, onCriado }: ComposerMo
     else { setCorBase(hex); setLuminosidade(getLuminosidadeBase(hex)) }
   }
 
+  function onEscolherFoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const arquivo = e.target.files?.[0]
+    if (!arquivo) return
+    setFotoArquivo(arquivo)
+    const leitor = new FileReader()
+    leitor.onload = ev => setFotoPreview(ev.target?.result as string)
+    leitor.readAsDataURL(arquivo)
+  }
+
+  function removerFoto() {
+    setFotoPreview(null)
+    setFotoArquivo(null)
+    if (inputFotoRef.current) inputFotoRef.current.value = ''
+  }
+
   async function salvar() {
     if (!titulo.trim()) { setErro('Titulo obrigatorio.'); return }
     if (!conteudo.trim()) { setErro('Conteudo obrigatorio.'); return }
     setSalvando(true); setErro('')
     const novaOrdem = maxOrdemAtual(notes, blocos) + 1
     const pos = proximaPosicaoLivre(notes, blocos)
-    const data = await api.post<{ note: Note }>('/notes', { titulo: titulo.trim(), conteudo: conteudo.trim(), cor: corFinal, canvasX: pos.x, canvasY: pos.y, canvasOrdem: novaOrdem })
+
+    let data: { note: Note }
+    if (fotoArquivo) {
+      const form = new FormData()
+      form.append('titulo', titulo.trim())
+      form.append('conteudo', conteudo.trim())
+      form.append('cor', corFinal)
+      form.append('canvasX', String(pos.x))
+      form.append('canvasY', String(pos.y))
+      form.append('canvasOrdem', String(novaOrdem))
+      form.append('imagemCapa', fotoArquivo)
+      data = await api.post<{ note: Note }>('/notes', form)
+    } else {
+      data = await api.post<{ note: Note }>('/notes', { titulo: titulo.trim(), conteudo: conteudo.trim(), cor: corFinal, canvasX: pos.x, canvasY: pos.y, canvasOrdem: novaOrdem })
+    }
     onCriado(data.note)
   }
 
   const indPct = (1 - (luminosidade - 0.15) / 0.70) * 100
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: `rgba(${tokens.shadowRgb},0.12)`, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onFechar}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: `rgba(${tokens.shadowRgb},0.12)`, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ background: corFinal, borderRadius: 16, width: '100%', maxWidth: 500, boxShadow: `0 24px 64px rgba(${tokens.shadowRgb},0.35)`, overflow: 'hidden', transition: 'background 0.25s', border: '1px solid rgba(255,255,255,0.50)' }} onClick={e => e.stopPropagation()}>
+
+        {fotoPreview && (
+          <div style={{ position: 'relative', height: 160, background: `url(${fotoPreview}) center/cover` }}>
+            <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to bottom,transparent 40%,rgba(${tokens.shadowRgb},0.55) 100%)` }} />
+            <button onClick={removerFoto} style={{ position: 'absolute', top: 10, right: 10, background: `rgba(${tokens.shadowRgb},0.5)`, border: 'none', borderRadius: '50%', width: 28, height: 28, color: 'white', cursor: 'pointer', fontSize: 14 }}>✕</button>
+          </div>
+        )}
+
         <div style={{ padding: 24 }}>
           <style>{`.note-input::placeholder{color:${fundoEscuro ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.30)'}}`}</style>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -830,6 +870,22 @@ function ComposerModal({ notes, blocos, tokens, onFechar, onCriado }: ComposerMo
               </div>
             )}
           </div>
+
+          <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 11, fontWeight: 600, color: textoEl, opacity: 0.55, marginBottom: 8, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Foto de capa</p>
+          <input ref={inputFotoRef} type="file" accept="image/*" onChange={onEscolherFoto} style={{ display: 'none' }} id="upload-foto-note" />
+
+          {!fotoPreview
+            ? <label htmlFor="upload-foto-note" style={{ display: 'flex', alignItems: 'center', gap: 8, background: inputBg, borderRadius: 8, padding: '10px 14px', cursor: 'pointer', marginBottom: 20, border: `1.5px dashed ${textoEl}` }}>
+                <span style={{ fontSize: 18 }}>🖼️</span>
+                <span style={{ fontFamily: typography.fontFamily.primary, fontSize: 12, color: textoEl, opacity: 0.65 }}>Clique para adicionar uma foto</span>
+              </label>
+            : <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+                <img src={fotoPreview} alt="preview" style={{ width: 48, height: 36, objectFit: 'cover', borderRadius: 6 }} />
+                <span style={{ fontFamily: typography.fontFamily.primary, fontSize: 12, color: textoEl, opacity: 0.8, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fotoArquivo?.name}</span>
+                <button onClick={removerFoto} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tokens.danger.text, fontSize: 16 }}>✕</button>
+              </div>
+          }
+
           {erro && <p style={{ color: tokens.danger.text, fontSize: 12, fontFamily: typography.fontFamily.primary, marginBottom: 12 }}>{erro}</p>}
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={onFechar} style={{ flex: 1, padding: 10, borderRadius: 8, background: inputBg, border: 'none', cursor: 'pointer', fontFamily: typography.fontFamily.primary, fontSize: 13, fontWeight: 600, color: textoEl, opacity: 0.8 }}>Cancelar</button>

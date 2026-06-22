@@ -8,9 +8,8 @@ const router = Router()
 router.use(authenticate)
 
 router.get('/', listarNotes)
-router.post('/', criarNote)
+router.post('/', uploadImagemCapa, criarNote)
 router.put('/:id/posicao', atualizarPosicao)
 router.delete('/:id', excluirNote)
-router.post('/', uploadImagemCapa, criarNote)
 
 export default router
