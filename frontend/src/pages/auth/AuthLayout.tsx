@@ -149,6 +149,95 @@ function TexturaOverlay({ filterId, borderRadius = 0 }: { filterId: string; bord
   )
 }
 
+// ── Rodapé com efeito de digitação ────────────────────────────────────────────
+//
+// O rodapé recebe ReactNode (texto + link), então a estratégia é:
+// - Dividir em duas partes fixas: prefixo ("Não tem uma conta? ") e link ("Criar conta")
+// - Digitar o prefixo caractere a caractere
+// - Depois revelar o link com fade
+// - O delay inicial sincroniza com o fim da animação dos post-its
+//   Desktop: post-its terminam ~3.0s (2.12 delay + 8 cards × 0.09 stagger + spring)
+//   Mobile:  post-its terminam ~2.2s (1.20 delay + stagger)
+
+interface RodapeDigitadoProps {
+  prefixo: string
+  link: React.ReactNode
+  // ms a esperar antes de começar a digitar
+  delay?: number
+  // ms por caractere
+  velocidade?: number
+}
+
+function RodapeDigitado({ prefixo, link, delay = 3200, velocidade = 55 }: RodapeDigitadoProps) {
+  const [chars, setChars]       = useState(0)
+  const [linkVisivel, setLink]  = useState(false)
+  const intervalRef             = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    const inicio = setTimeout(() => {
+      intervalRef.current = setInterval(() => {
+        setChars(prev => {
+          const next = prev + 1
+          if (next >= prefixo.length) {
+            clearInterval(intervalRef.current!)
+            // Link aparece logo após o último caractere
+            setTimeout(() => setLink(true), 120)
+          }
+          return next
+        })
+      }, velocidade)
+    }, delay)
+
+    return () => {
+      clearTimeout(inicio)
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [prefixo, delay, velocidade])
+
+  // Cursor piscante — some quando o link já apareceu
+  const mostrarCursor = chars < prefixo.length
+
+  return (
+    <div style={{
+      marginTop: '16px',
+      textAlign: 'center',
+      fontSize: '14px', fontWeight: 300,
+      fontFamily: 'Poppins, sans-serif',
+      color: 'rgba(60,20,100,0.70)',
+      zIndex: 10, position: 'relative',
+      minHeight: '1.4em',
+    }}>
+      <span>
+        {prefixo.slice(0, chars)}
+        {mostrarCursor && (
+          <span style={{
+            display: 'inline-block',
+            width: '1px',
+            height: '1em',
+            background: 'rgba(60,20,100,0.60)',
+            marginLeft: '1px',
+            verticalAlign: 'text-bottom',
+            animation: 'cursorPiscar 0.75s step-end infinite',
+          }} />
+        )}
+      </span>
+      <span style={{
+        opacity: linkVisivel ? 1 : 0,
+        transition: 'opacity 0.35s ease',
+        display: 'inline',
+      }}>
+        {link}
+      </span>
+      <style>{`
+        @keyframes cursorPiscar {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 // ── Dimensões dinâmicas ────────────────────────────────────────────────────────
 
 function getDims() {
@@ -168,11 +257,11 @@ const LEQUE_COLORS = [
   '#3FB0D8', '#AB75B3', '#F1902C', '#E84439',
 ]
 
-// Desktop: leque abre para os lados (ângulos horizontais)
-const LEQUE_ANGULOS_DESKTOP = [-1, -30, -52, -72, -89, -105, -119, -132].map(a => a + (-1))
+const LEQUE_OFFSET_DESKTOP = -1
+const LEQUE_OFFSET_MOBILE  = 80
 
-// Mobile: leque abre para cima (ângulos verticais, todos no semicírculo superior)
-const LEQUE_ANGULOS_MOBILE = [-15, -35, -57, -78, -100, -122, -143, -163]
+const LEQUE_ANGULOS_DESKTOP = [-1, -30, -52, -72, -89, -105, -119, -132].map(a => a + LEQUE_OFFSET_DESKTOP)
+const LEQUE_ANGULOS_MOBILE  = [-15, -35, -57, -78, -100, -116, -130, -140].map(a => a + LEQUE_OFFSET_MOBILE)
 
 let _animacaoJaRodou = false
 
@@ -183,11 +272,8 @@ function PostitsLeque({ jaRodou, isMobile }: { jaRodou: boolean; isMobile: boole
   const CARD_W        = dims.CARD_W
   const CARD_H        = dims.CARD_H
 
-  // Posicionamento do pivot do leque
-  // Mobile: pivot na parte inferior central do envelope, para os cards saírem para cima
-  // Desktop: pivot na lateral direita
   const pivotStyle: React.CSSProperties = isMobile
-    ? { position: 'absolute', bottom: 180, left: '50%', width: 0, height: 0, zIndex: 5, pointerEvents: 'none' }
+    ? { position: 'absolute', bottom: 350, left: '62%', width: 0, height: 0, zIndex: 5, pointerEvents: 'none' }
     : { position: 'absolute', bottom: 180, right: 285, width: 0, height: 0, zIndex: 5, pointerEvents: 'none' }
 
   return (
@@ -249,8 +335,6 @@ function PostitsLeque({ jaRodou, isMobile }: { jaRodou: boolean; isMobile: boole
 // ── Aba do envelope ────────────────────────────────────────────────────────────
 
 function AbaEnvelope({ jaRodou, isMobile }: { jaRodou: boolean; isMobile: boolean }) {
-  // Desktop: aba lateral esquerda abre para o lado (rotateY)
-  // Mobile: aba superior abre para cima (rotateX)
   if (isMobile) {
     return (
       <motion.div
@@ -261,16 +345,14 @@ function AbaEnvelope({ jaRodou, isMobile }: { jaRodou: boolean; isMobile: boolea
         style={{
           position: 'absolute',
           top: 0, left: 0,
-          width: '100%',
-          height: '52%',
+          width: '100%', height: '52%',
           transformOrigin: 'top center',
           transformStyle: 'preserve-3d',
-          zIndex: 2,
-          pointerEvents: 'none',
+          zIndex: 2, pointerEvents: 'none',
           clipPath: 'polygon(0% 0%, 100% 0%, 50% 100%)',
           background: 'rgba(228,218,242,0.97)',
           boxShadow: 'inset 0 -2px 8px rgba(140,110,190,0.25)',
-          borderRadius: '16px 16px 0 0',
+          borderRadius: '0px',
           overflow: 'hidden',
         }}
       >
@@ -279,7 +361,6 @@ function AbaEnvelope({ jaRodou, isMobile }: { jaRodou: boolean; isMobile: boolea
     )
   }
 
-  // Desktop — original
   return (
     <motion.div
       aria-hidden="true"
@@ -308,30 +389,24 @@ function AbaEnvelope({ jaRodou, isMobile }: { jaRodou: boolean; isMobile: boolea
 // ── Envelope animado ───────────────────────────────────────────────────────────
 
 function EnvelopeAnimado({ children, isMobile }: { children: React.ReactNode; isMobile: boolean }) {
-  const jaRodou = _animacaoJaRodou
+  const jaRodou  = _animacaoJaRodou
   const controls = useAnimation()
-  const dims = getDims()
+  const dims     = getDims()
 
   useEffect(() => {
     if (jaRodou) return
     _animacaoJaRodou = true
     controls.start({
-      rotate: 0, opacity: 1,
-      y: 0,
+      rotate: 0, opacity: 1, y: 0,
       transition: { delay: 0.8, duration: 0.72, ease: [0.4, 0, 0.2, 1] },
     })
   }, [])
 
-  // Mobile: envelope entra de baixo para cima
-  // Desktop: envelope rotaciona de 90° para 0°
   const initialAnim = isMobile
     ? { rotate: 0, opacity: 0, y: 60 }
     : { rotate: 90, opacity: 1,  y: 0 }
 
-  const animateAnim = jaRodou
-    ? { rotate: 0, opacity: 1, y: 0 }
-    : controls as any
-
+  const animateAnim = jaRodou ? { rotate: 0, opacity: 1, y: 0 } : controls as any
   const mobileEntrada = !jaRodou && isMobile
     ? { opacity: 1, y: 0, transition: { delay: 0.4, duration: 0.60, ease: [0.4, 0, 0.2, 1] } }
     : undefined
@@ -352,7 +427,7 @@ function EnvelopeAnimado({ children, isMobile }: { children: React.ReactNode; is
       <div style={{
         position: 'absolute', inset: 0,
         background: 'rgba(232,224,245,0.98)',
-        borderRadius: isMobile ? 20 : '0 16px 16px 0',
+        borderRadius: isMobile ? '0 0 20px 20px' : '0 16px 16px 0',
         border: '1px solid rgba(180,158,210,0.75)',
         boxShadow: [
           '0 2px 0 rgba(255,255,255,0.90) inset',
@@ -380,7 +455,7 @@ function EnvelopeAnimado({ children, isMobile }: { children: React.ReactNode; is
         style={{
           position: 'absolute', inset: 0,
           background: 'rgba(245,241,252,0.97)',
-          borderRadius: isMobile ? 20 : '0 16px 16px 0',
+          borderRadius: isMobile ? '0 0 20px 20px' : '0 16px 16px 0',
           border: '1px solid rgba(180,158,210,0.75)',
           boxShadow: '0 2px 0 rgba(255,255,255,0.90) inset, 0 8px 32px rgba(100,60,170,0.18)',
           zIndex: 8,
@@ -415,6 +490,25 @@ export function AuthLayout({ children, rodape }: AuthLayoutProps) {
     return () => window.removeEventListener('resize', handler)
   }, [])
 
+  // Extrai prefixo e link do ReactNode do rodapé.
+  // O rodapé vem sempre como: <>Não tem uma conta? <LinkAuth href="...">Criar conta</LinkAuth></>
+  // Separamos em prefixo (string) + link (ReactNode) para animar o texto e revelar o link.
+  function extrairRodape(node: React.ReactNode): { prefixo: string; link: React.ReactNode } {
+    if (!node) return { prefixo: '', link: null }
+    const children = (node as React.ReactElement)?.props?.children
+    if (!Array.isArray(children)) return { prefixo: String(node), link: null }
+    const prefixo = children.filter((c: unknown) => typeof c === 'string').join('')
+    const link    = children.find((c: unknown) => typeof c !== 'string') ?? null
+    return { prefixo, link }
+  }
+
+  const { prefixo, link } = extrairRodape(rodape)
+
+  // Delay de digitação sincronizado com o fim dos post-its:
+  // Desktop: delayChildren 2.12s + 8 cards × 0.09s stagger + ~0.8s spring = ~3.7s
+  // Mobile:  delayChildren 1.20s + stagger + spring = ~2.6s
+  const delayDigitacao = isMobile ? 2600 : 3700
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 1,
@@ -432,16 +526,12 @@ export function AuthLayout({ children, rodape }: AuthLayoutProps) {
       </EnvelopeAnimado>
 
       {rodape && (
-        <div style={{
-          marginTop: '16px',
-          textAlign: 'center',
-          fontSize: '14px', fontWeight: 300,
-          fontFamily: 'Poppins, sans-serif',
-          color: 'rgba(60,20,100,0.70)',
-          zIndex: 10, position: 'relative',
-        }}>
-          {rodape}
-        </div>
+        <RodapeDigitado
+          prefixo={prefixo}
+          link={link}
+          delay={delayDigitacao}
+          velocidade={52}
+        />
       )}
 
       <footer style={{
