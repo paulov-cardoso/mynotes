@@ -68,6 +68,18 @@ const PALETA_BASE = [
   { hex: '#6B7280', nome: 'Cinza' },
 ]
 
+
+function useMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640)
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 640)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+  return isMobile
+}
+
+
 function snapToGrid(x: number, y: number) {
   return {
     x: Math.round(x / GRID_COL) * GRID_COL,
@@ -81,14 +93,25 @@ function celulaOcupada(notes: Note[], blocos: Bloco[], sx: number, sy: number, i
   return noteOcupa || blocoOcupa
 }
 
-function proximaPosicaoLivre(notes: Note[], blocos: Bloco[]) {
-  const COLS = 6
-  const ocupadas = new Set<string>()
-  for (const n of notes) ocupadas.add(`${Math.round(n.canvasX / GRID_COL)},${Math.round(n.canvasY / GRID_ROW)}`)
+function proximaPosicaoLivre(notes: Note[], blocos: Bloco[], mobile = false) {
+  const COLS      = mobile ? 2   : 6
+  const ROWS_VERT = mobile ? 5   : 9999
+  const ocupadas  = new Set<string>()
+  for (const n of notes)  ocupadas.add(`${Math.round(n.canvasX / GRID_COL)},${Math.round(n.canvasY / GRID_ROW)}`)
   for (const b of blocos) ocupadas.add(`${Math.round(b.canvasX / GRID_COL)},${Math.round(b.canvasY / GRID_ROW)}`)
-  for (let lin = 0; lin < 9999; lin++) {
+
+  if (mobile) {
+    // Preenche verticalmente: 5 linhas por coluna antes de quebrar
     for (let col = 0; col < COLS; col++) {
-      if (!ocupadas.has(`${col},${lin}`)) return { x: col * GRID_COL, y: lin * GRID_ROW }
+      for (let lin = 0; lin < ROWS_VERT; lin++) {
+        if (!ocupadas.has(`${col},${lin}`)) return { x: col * GRID_COL, y: lin * GRID_ROW }
+      }
+    }
+  } else {
+    for (let lin = 0; lin < 9999; lin++) {
+      for (let col = 0; col < COLS; col++) {
+        if (!ocupadas.has(`${col},${lin}`)) return { x: col * GRID_COL, y: lin * GRID_ROW }
+      }
     }
   }
   return { x: 0, y: 0 }
@@ -812,7 +835,7 @@ function ComposerModal({ notes, blocos, tokens, onFechar, onCriado }: ComposerMo
     if (!conteudo.trim()) { setErro('Conteudo obrigatorio.'); return }
     setSalvando(true); setErro('')
     const novaOrdem = maxOrdemAtual(notes, blocos) + 1
-    const pos = proximaPosicaoLivre(notes, blocos)
+    const pos = proximaPosicaoLivre(notes, blocos, window.innerWidth < 640)
 
     let data: { note: Note }
     if (fotoArquivo) {
@@ -913,11 +936,11 @@ export function NotesPage() {
   const [newNoteId, setNewNoteId]               = useState<number | null>(null)
   const [snapBackId, setSnapBackId]             = useState<number | null>(null)
   const [destacado, setDestacado]               = useState<number | null>(null)
-  const [confirmModal, setConfirmModal]         = useState<{ tipo: 'desfazer' | 'destruir'; blocoId: number } | null>(null)
+  const [confirmModal, setConfirmModal]         = useState<{ tipo: 'desazer' | 'destruir'; blocoId: number } | null>(null)
 
   const [camX, setCamX] = useState(CANVAS_GAP)
   const [camY, setCamY] = useState(CANVAS_GAP)
-  const [zoom, setZoom] = useState(ZOOM_DEFAULT)
+  const [zoom, setZoom] = useState(() => window.innerWidth < 640 ? 0.45 : ZOOM_DEFAULT)
   const [zoomExpanded, setZoomExpanded] = useState(false)
 
   const [busca, setBusca]                 = useState('')
@@ -935,6 +958,7 @@ export function NotesPage() {
   const [dragPos, setDragPos]                 = useState<{ x: number; y: number } | null>(null)
 
   const { tokens } = useTheme()
+  const isMobile = useMobile()
 
   const pillBgCollapsed = tokens.surface.glass
   const pillBgExpanded  = tokens.surface.glassStrong
@@ -950,6 +974,24 @@ export function NotesPage() {
     window.addEventListener('notes:abrirComposer', handler)
     return () => window.removeEventListener('notes:abrirComposer', handler)
   }, [])
+
+  useEffect(() => {
+    function onBusca(e: Event) {
+      setBusca((e as CustomEvent<string>).detail)
+      if (!buscaExpanded) setBuscaExpanded(true)
+    }
+    function onLimpar() {
+      setBusca('')
+      setBuscaExpanded(false)
+    }
+    window.addEventListener('notes:busca',       onBusca   as EventListener)
+    window.addEventListener('notes:buscaLimpar', onLimpar)
+    return () => {
+      window.removeEventListener('notes:busca',       onBusca   as EventListener)
+      window.removeEventListener('notes:buscaLimpar', onLimpar)
+    }
+  }, [buscaExpanded])
+
   useEffect(() => {
     if (dropdownCardId === null && dropdownBlocoId === null) return
     function handler(e: MouseEvent) {
@@ -1198,7 +1240,8 @@ export function NotesPage() {
           })}
         </div>
 
-        {/* Pill de busca */}
+        {/* ===== Search Section - pill de busca ===== */}
+        {!isMobile && (
         <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', zIndex: 60 }}>
           <div style={{ background: buscaExpanded ? pillBgExpanded : pillBgCollapsed, backdropFilter: 'blur(16px)', borderRadius: buscaExpanded ? 14 : 999, border: `1px solid ${tokens.border.subtle}`, boxShadow: buscaExpanded ? `0 8px 28px rgba(${tokens.shadowRgb},0.20)` : 'none', transition: 'border-radius 0.2s, background 0.2s, box-shadow 0.2s', minWidth: buscaExpanded ? 340 : undefined }}>
             <div style={{ display: 'flex', alignItems: 'center', padding: buscaExpanded ? '0 14px' : '7px 16px', gap: 8, cursor: buscaExpanded ? 'default' : 'pointer' }} onClick={!buscaExpanded ? toggleBusca : undefined}>
@@ -1231,16 +1274,55 @@ export function NotesPage() {
             )}
           </div>
         </div>
+        )}
 
         {/* FAB */}
-        <button onClick={() => setComposerAberto(true)} style={{ position: 'absolute', bottom: 28, right: 28, height: 44, borderRadius: 999, background: tokens.accent.gradientFab, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', boxShadow: fabShadowNormal, zIndex: 60, transition: 'transform 0.2s, box-shadow 0.2s', fontFamily: typography.fontFamily.primary, fontSize: 13, fontWeight: 600, color: tokens.accent.onAccent }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = fabShadowHover }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = fabShadowNormal }}>
+        <button
+          onClick={() => setComposerAberto(true)}
+          style={{
+            position: 'absolute',
+            bottom: 20,
+            ...(isMobile
+              ? { left: '50%', transform: 'translateX(-50%)', width: 'calc(100% - 48px)', justifyContent: 'center' }
+              : { right: 28 }
+            ),
+            height: 44,
+            borderRadius: 999,
+            background: tokens.accent.gradientFab,
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: isMobile ? '0 24px' : '0 20px',
+            boxShadow: fabShadowNormal,
+            zIndex: 60,
+            transition: 'transform 0.2s, box-shadow 0.2s',
+            fontFamily: typography.fontFamily.primary,
+            fontSize: 13,
+            fontWeight: 600,
+            color: tokens.accent.onAccent,
+          }}
+          onMouseEnter={e => {
+            if (!isMobile) {
+              e.currentTarget.style.transform = 'scale(1.05)'
+              e.currentTarget.style.boxShadow = fabShadowHover
+            }
+          }}
+          onMouseLeave={e => {
+            if (!isMobile) {
+              e.currentTarget.style.transform = 'scale(1)'
+              e.currentTarget.style.boxShadow = fabShadowNormal
+            }
+          }}
+        >
           <LapisSVG />Criar novo note
         </button>
 
-        {/* Painel de zoom */}
-        <div style={{ position: 'absolute', bottom: 100, right: 28, zIndex: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+        {/* ========== Painel de zoom ============= */}
+        {!isMobile && (
+          // ... painel de zoom existente inteiro
+           <div style={{ position: 'absolute', bottom: 100, right: 28, zIndex: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
           {zoomExpanded && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, animation: 'zoomExpand 0.18s ease-out' }}>
               <BotaoZoom label="+" title="Aproximar" onClick={zoomIn} tokens={tokens} fontSize={20} />
@@ -1250,6 +1332,8 @@ export function NotesPage() {
           )}
           <button onClick={() => setZoomExpanded(v => !v)} title="Controles de zoom" style={{ width: 42, height: 42, borderRadius: '50%', background: zoomExpanded ? zoomBtnAtivo : zoomBtnInativo, border: `1px solid ${tokens.border.subtle}`, backdropFilter: 'blur(12px)', boxShadow: `0 2px 10px rgba(${tokens.shadowRgb},0.22)`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, transition: 'background 0.2s' }}>🎮</button>
         </div>
+        )}
+
       </div>
 
       {formarBlocoCardId !== null && <ModalFormarBloco tokens={tokens} onConfirmar={nome => formarBloco(formarBlocoCardId, nome)} onCancelar={() => setFormarBlocoCardId(null)} />}

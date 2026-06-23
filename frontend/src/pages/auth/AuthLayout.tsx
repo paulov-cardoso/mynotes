@@ -1,10 +1,16 @@
-import { useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, useAnimation } from 'framer-motion'
 
 interface AuthLayoutProps {
   children: React.ReactNode
   rodape?: React.ReactNode
 }
+
+// ── Detecção mobile ────────────────────────────────────────────────────────────
+
+function getIsMobile() { return window.innerWidth < 640 }
+
+// ── Canvas de post-its caindo ──────────────────────────────────────────────────
 
 const POSTIT_COLORS_BG = ['#8a8a30', '#FFFF99', '#ce3975', '#af651b', '#a9b529', '#3c7bbf', '#c7637a']
 const POSTIT_TOTAL     = 32
@@ -108,6 +114,8 @@ function CanvasPostits() {
   )
 }
 
+// ── Filtros de papel ───────────────────────────────────────────────────────────
+
 function PaperFilters() {
   return (
     <svg aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
@@ -132,35 +140,56 @@ function TexturaOverlay({ filterId, borderRadius = 0 }: { filterId: string; bord
     <div
       aria-hidden="true"
       style={{
-        position: 'absolute',
-        inset: 0,
-        borderRadius,
+        position: 'absolute', inset: 0, borderRadius,
         filter: `url(#${filterId})`,
-        pointerEvents: 'none',
-        zIndex: 10,
+        pointerEvents: 'none', zIndex: 10,
         background: 'rgba(255,255,255,0.01)',
       }}
     />
   )
 }
 
-const ENVELOPE_W = 360
-const ENVELOPE_H = 480
-const CARD_W     = 150
-const CARD_H     = 150
+// ── Dimensões dinâmicas ────────────────────────────────────────────────────────
 
-let _animacaoJaRodou = false
+function getDims() {
+  const mobile = getIsMobile()
+  return {
+    ENVELOPE_W: mobile ? Math.min(window.innerWidth - 32, 340) : 360,
+    ENVELOPE_H: mobile ? 500 : 480,
+    CARD_W:     mobile ? 110 : 150,
+    CARD_H:     mobile ? 110 : 150,
+  }
+}
+
+// ── Leque de post-its ──────────────────────────────────────────────────────────
 
 const LEQUE_COLORS = [
   '#EEAAA9', '#EBC861', '#dcf06b', '#81BB71',
   '#3FB0D8', '#AB75B3', '#F1902C', '#E84439',
 ]
 
-const LEQUE_OFFSET  = -1
-const LEQUE_RAIO    = 48
-const LEQUE_ANGULOS = [-1, -30, -52, -72, -89, -105, -119, -132].map(a => a + LEQUE_OFFSET)
+// Desktop: leque abre para os lados (ângulos horizontais)
+const LEQUE_ANGULOS_DESKTOP = [-1, -30, -52, -72, -89, -105, -119, -132].map(a => a + (-1))
 
-function PostitsLeque({ jaRodou }: { jaRodou: boolean }) {
+// Mobile: leque abre para cima (ângulos verticais, todos no semicírculo superior)
+const LEQUE_ANGULOS_MOBILE = [-15, -35, -57, -78, -100, -122, -143, -163]
+
+let _animacaoJaRodou = false
+
+function PostitsLeque({ jaRodou, isMobile }: { jaRodou: boolean; isMobile: boolean }) {
+  const dims = getDims()
+  const LEQUE_RAIO    = isMobile ? 40 : 48
+  const LEQUE_ANGULOS = isMobile ? LEQUE_ANGULOS_MOBILE : LEQUE_ANGULOS_DESKTOP
+  const CARD_W        = dims.CARD_W
+  const CARD_H        = dims.CARD_H
+
+  // Posicionamento do pivot do leque
+  // Mobile: pivot na parte inferior central do envelope, para os cards saírem para cima
+  // Desktop: pivot na lateral direita
+  const pivotStyle: React.CSSProperties = isMobile
+    ? { position: 'absolute', bottom: 180, left: '50%', width: 0, height: 0, zIndex: 5, pointerEvents: 'none' }
+    : { position: 'absolute', bottom: 180, right: 285, width: 0, height: 0, zIndex: 5, pointerEvents: 'none' }
+
   return (
     <motion.div
       aria-hidden="true"
@@ -171,64 +200,86 @@ function PostitsLeque({ jaRodou }: { jaRodou: boolean }) {
         show: {
           transition: {
             staggerChildren: jaRodou ? 0 : 0.09,
-            delayChildren:   jaRodou ? 0 : 2.12,
+            delayChildren:   jaRodou ? 0 : (isMobile ? 1.20 : 2.12),
           },
         },
       }}
-      style={{
-        position: 'absolute',
-        bottom: 180,
-        right: 285,
-        width: 0,
-        height: 0,
-        zIndex: 5,
-        pointerEvents: 'none',
-      }}
+      style={pivotStyle}
     >
-      {LEQUE_COLORS.map((cor, i) => (
-        <motion.div
-          key={i}
-          variants={{
-            hidden: jaRodou
-              ? {
-                  rotate:  LEQUE_ANGULOS[i],
-                  x: Math.cos((LEQUE_ANGULOS[i] - 90) * Math.PI / 180) * LEQUE_RAIO * i * 0.4,
-                  y: Math.sin((LEQUE_ANGULOS[i] - 90) * Math.PI / 180) * LEQUE_RAIO * i * 0.4 - CARD_H * 0.9,
-                  opacity: 1, scale: 1,
-                }
-              : { rotate: 0, x: 0, y: 0, opacity: 0, scale: 0.7 },
-            show: {
-              rotate:  LEQUE_ANGULOS[i],
-              x: Math.cos((LEQUE_ANGULOS[i] - 90) * Math.PI / 180) * LEQUE_RAIO * i * 0.4,
-              y: Math.sin((LEQUE_ANGULOS[i] - 90) * Math.PI / 180) * LEQUE_RAIO * i * 0.4 - CARD_H * 0.9,
-              opacity: 1, scale: 1,
-              transition: jaRodou
-                ? { duration: 0 }
-                : { type: 'spring', stiffness: 120, damping: 18, mass: 1.1 },
-            },
-          }}
-          style={{
-            position: 'absolute',
-            width: CARD_W,
-            height: CARD_H,
-            background: cor,
-            borderRadius: 15,
-            boxShadow: '0 8px 28px rgba(0,0,0,0.18)',
-            transformOrigin: 'bottom right',
-            bottom: 0,
-            right: 0,
-            zIndex: LEQUE_COLORS.length - 1 - i,
-            overflow: 'hidden',
-          }}
-        >
-          <TexturaOverlay filterId="paper-postit" borderRadius={15} />
-        </motion.div>
-      ))}
+      {LEQUE_COLORS.map((cor, i) => {
+        const ang = LEQUE_ANGULOS[i]
+        const rad = (ang - 90) * Math.PI / 180
+        const tx  = Math.cos(rad) * LEQUE_RAIO * i * 0.4
+        const ty  = Math.sin(rad) * LEQUE_RAIO * i * 0.4 - CARD_H * 0.9
+
+        return (
+          <motion.div
+            key={i}
+            variants={{
+              hidden: jaRodou
+                ? { rotate: ang, x: tx, y: ty, opacity: 1, scale: 1 }
+                : { rotate: 0,   x: 0,  y: 0,  opacity: 0, scale: 0.7 },
+              show: {
+                rotate: ang, x: tx, y: ty, opacity: 1, scale: 1,
+                transition: jaRodou
+                  ? { duration: 0 }
+                  : { type: 'spring', stiffness: 120, damping: 18, mass: 1.1 },
+              },
+            }}
+            style={{
+              position: 'absolute',
+              width: CARD_W, height: CARD_H,
+              background: cor, borderRadius: 15,
+              boxShadow: '0 8px 28px rgba(0,0,0,0.18)',
+              transformOrigin: isMobile ? 'bottom center' : 'bottom right',
+              bottom: 0,
+              ...(isMobile ? { left: -CARD_W / 2 } : { right: 0 }),
+              zIndex: LEQUE_COLORS.length - 1 - i,
+              overflow: 'hidden',
+            }}
+          >
+            <TexturaOverlay filterId="paper-postit" borderRadius={15} />
+          </motion.div>
+        )
+      })}
     </motion.div>
   )
 }
 
-function AbaEnvelope({ jaRodou }: { jaRodou: boolean }) {
+// ── Aba do envelope ────────────────────────────────────────────────────────────
+
+function AbaEnvelope({ jaRodou, isMobile }: { jaRodou: boolean; isMobile: boolean }) {
+  // Desktop: aba lateral esquerda abre para o lado (rotateY)
+  // Mobile: aba superior abre para cima (rotateX)
+  if (isMobile) {
+    return (
+      <motion.div
+        aria-hidden="true"
+        initial={{ rotateX: jaRodou ? -160 : 0 }}
+        animate={{ rotateX: -160 }}
+        transition={jaRodou ? { duration: 0 } : { delay: 0.90, duration: 0.60, ease: [0.4, 0, 0.2, 1] }}
+        style={{
+          position: 'absolute',
+          top: 0, left: 0,
+          width: '100%',
+          height: '52%',
+          transformOrigin: 'top center',
+          transformStyle: 'preserve-3d',
+          zIndex: 2,
+          pointerEvents: 'none',
+          clipPath: 'polygon(0% 0%, 100% 0%, 50% 100%)',
+          background: 'rgba(228,218,242,0.97)',
+          boxShadow: 'inset 0 -2px 8px rgba(140,110,190,0.25)',
+          borderRadius: '16px 16px 0 0',
+          overflow: 'hidden',
+        }}
+      >
+        <TexturaOverlay filterId="paper-envelope" />
+      </motion.div>
+    )
+  }
+
+  // Desktop — original
   return (
     <motion.div
       aria-hidden="true"
@@ -237,14 +288,11 @@ function AbaEnvelope({ jaRodou }: { jaRodou: boolean }) {
       transition={jaRodou ? { duration: 0 } : { delay: 1.52, duration: 0.60, ease: [0.4, 0, 0.2, 1] }}
       style={{
         position: 'absolute',
-        top: 0,
-        left: 3,
-        width: '54%',
-        height: '101%',
+        top: 0, left: 3,
+        width: '54%', height: '101%',
         transformOrigin: 'left center',
         transformStyle: 'preserve-3d',
-        zIndex: 2,
-        pointerEvents: 'none',
+        zIndex: 2, pointerEvents: 'none',
         clipPath: 'polygon(0% 0%, 0% 100%, 100% 50%)',
         background: 'rgba(228,218,242,0.97)',
         boxShadow: 'inset -2px 0 8px rgba(140,110,190,0.25)',
@@ -257,91 +305,95 @@ function AbaEnvelope({ jaRodou }: { jaRodou: boolean }) {
   )
 }
 
-function EnvelopeAnimado({ children }: { children: React.ReactNode }) {
+// ── Envelope animado ───────────────────────────────────────────────────────────
+
+function EnvelopeAnimado({ children, isMobile }: { children: React.ReactNode; isMobile: boolean }) {
   const jaRodou = _animacaoJaRodou
   const controls = useAnimation()
+  const dims = getDims()
 
   useEffect(() => {
     if (jaRodou) return
     _animacaoJaRodou = true
     controls.start({
-      rotate: 0,
-      opacity: 1,
+      rotate: 0, opacity: 1,
+      y: 0,
       transition: { delay: 0.8, duration: 0.72, ease: [0.4, 0, 0.2, 1] },
     })
   }, [])
 
+  // Mobile: envelope entra de baixo para cima
+  // Desktop: envelope rotaciona de 90° para 0°
+  const initialAnim = isMobile
+    ? { rotate: 0, opacity: 0, y: 60 }
+    : { rotate: 90, opacity: 1,  y: 0 }
+
+  const animateAnim = jaRodou
+    ? { rotate: 0, opacity: 1, y: 0 }
+    : controls as any
+
+  const mobileEntrada = !jaRodou && isMobile
+    ? { opacity: 1, y: 0, transition: { delay: 0.4, duration: 0.60, ease: [0.4, 0, 0.2, 1] } }
+    : undefined
+
   return (
     <motion.div
-      initial={jaRodou ? { rotate: 0, opacity: 1 } : { rotate: 90, opacity: 1 }}
-      animate={jaRodou ? { rotate: 0, opacity: 1 } : controls}
+      initial={initialAnim}
+      animate={mobileEntrada || animateAnim}
       style={{
         position: 'relative',
-        width: ENVELOPE_W,
-        height: ENVELOPE_H,
+        width: dims.ENVELOPE_W,
+        height: dims.ENVELOPE_H,
         zIndex: 2,
         perspective: 1000,
       }}
     >
-      {/* Verso do envelope */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'rgba(232,224,245,0.98)',
-          borderRadius: '0 16px 16px 0',
-          border: '1px solid rgba(180,158,210,0.75)',
-          boxShadow: [
-            '0 2px 0 rgba(255,255,255,0.90) inset',
-            '0 32px 80px rgba(100,60,170,0.28)',
-            '0 4px 20px rgba(0,0,0,0.14)',
-          ].join(', '),
-          zIndex: 1,
-          overflow: 'hidden',
-        }}
-      >
-        <svg
-          aria-hidden="true"
-          viewBox={`0 0 ${ENVELOPE_W} ${ENVELOPE_H}`}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-        >
-          <path d={`M 0 ${ENVELOPE_H} L ${ENVELOPE_W * 0.40} ${ENVELOPE_H * 0.50} L ${ENVELOPE_W} ${ENVELOPE_H} Z`} fill="rgba(190,168,220,0.30)" />
-          <path d={`M ${ENVELOPE_W} 0 L ${ENVELOPE_W * 0.60} ${ENVELOPE_H * 0.50} L ${ENVELOPE_W} ${ENVELOPE_H} Z`} fill="rgba(190,168,220,0.22)" />
+      {/* Verso */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'rgba(232,224,245,0.98)',
+        borderRadius: isMobile ? 20 : '0 16px 16px 0',
+        border: '1px solid rgba(180,158,210,0.75)',
+        boxShadow: [
+          '0 2px 0 rgba(255,255,255,0.90) inset',
+          '0 32px 80px rgba(100,60,170,0.28)',
+          '0 4px 20px rgba(0,0,0,0.14)',
+        ].join(', '),
+        zIndex: 1, overflow: 'hidden',
+      }}>
+        <svg aria-hidden="true" viewBox={`0 0 ${dims.ENVELOPE_W} ${dims.ENVELOPE_H}`}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+          <path d={`M 0 ${dims.ENVELOPE_H} L ${dims.ENVELOPE_W * 0.40} ${dims.ENVELOPE_H * 0.50} L ${dims.ENVELOPE_W} ${dims.ENVELOPE_H} Z`} fill="rgba(190,168,220,0.30)" />
+          <path d={`M ${dims.ENVELOPE_W} 0 L ${dims.ENVELOPE_W * 0.60} ${dims.ENVELOPE_H * 0.50} L ${dims.ENVELOPE_W} ${dims.ENVELOPE_H} Z`} fill="rgba(190,168,220,0.22)" />
         </svg>
         <TexturaOverlay filterId="paper-envelope" />
       </div>
 
-      <AbaEnvelope jaRodou={jaRodou} />
-      <PostitsLeque jaRodou={jaRodou} />
+      <AbaEnvelope jaRodou={jaRodou} isMobile={isMobile} />
+      <PostitsLeque jaRodou={jaRodou} isMobile={isMobile} />
 
-      {/* Frente do envelope */}
+      {/* Frente */}
       <motion.div
         initial={{ opacity: jaRodou ? 1 : 0 }}
         animate={{ opacity: 1 }}
-        transition={jaRodou ? { duration: 0 } : { delay: 1.52, duration: 0.40, ease: [0.4, 0, 0.2, 1] }}
+        transition={jaRodou ? { duration: 0 } : { delay: isMobile ? 0.90 : 1.52, duration: 0.40, ease: [0.4, 0, 0.2, 1] }}
         style={{
-          position: 'absolute',
-          inset: 0,
+          position: 'absolute', inset: 0,
           background: 'rgba(245,241,252,0.97)',
-          borderRadius: '0 16px 16px 0',
+          borderRadius: isMobile ? 20 : '0 16px 16px 0',
           border: '1px solid rgba(180,158,210,0.75)',
           boxShadow: '0 2px 0 rgba(255,255,255,0.90) inset, 0 8px 32px rgba(100,60,170,0.18)',
           zIndex: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '36px 32px 32px',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          padding: isMobile ? '28px 24px 24px' : '36px 32px 32px',
           overflow: 'hidden',
         }}
       >
-        <svg
-          aria-hidden="true"
-          viewBox={`0 0 ${ENVELOPE_W} ${ENVELOPE_H}`}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}
-        >
-          <path d={`M 0 ${ENVELOPE_H} L ${ENVELOPE_W * 0.40} ${ENVELOPE_H * 0.50} L ${ENVELOPE_W} ${ENVELOPE_H} Z`} fill="rgba(190,168,220,0.22)" />
-          <path d={`M ${ENVELOPE_W} 0 L ${ENVELOPE_W * 0.60} ${ENVELOPE_H * 0.50} L ${ENVELOPE_W} ${ENVELOPE_H} Z`} fill="rgba(190,168,220,0.16)" />
+        <svg aria-hidden="true" viewBox={`0 0 ${dims.ENVELOPE_W} ${dims.ENVELOPE_H}`}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
+          <path d={`M 0 ${dims.ENVELOPE_H} L ${dims.ENVELOPE_W * 0.40} ${dims.ENVELOPE_H * 0.50} L ${dims.ENVELOPE_W} ${dims.ENVELOPE_H} Z`} fill="rgba(190,168,220,0.22)" />
+          <path d={`M ${dims.ENVELOPE_W} 0 L ${dims.ENVELOPE_W * 0.60} ${dims.ENVELOPE_H * 0.50} L ${dims.ENVELOPE_W} ${dims.ENVELOPE_H} Z`} fill="rgba(190,168,220,0.16)" />
         </svg>
         <TexturaOverlay filterId="paper-envelope" />
         <div style={{ position: 'relative', zIndex: 1, width: '100%', paddingBottom: '40px' }}>
@@ -352,7 +404,17 @@ function EnvelopeAnimado({ children }: { children: React.ReactNode }) {
   )
 }
 
+// ── AuthLayout ─────────────────────────────────────────────────────────────────
+
 export function AuthLayout({ children, rodape }: AuthLayoutProps) {
+  const [isMobile, setIsMobile] = useState(getIsMobile)
+
+  useEffect(() => {
+    const handler = () => setIsMobile(getIsMobile())
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 1,
@@ -360,25 +422,23 @@ export function AuthLayout({ children, rodape }: AuthLayoutProps) {
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       padding: '1rem',
+      overflowY: 'auto',
     }}>
       <PaperFilters />
       <CanvasPostits />
 
-      <EnvelopeAnimado>
+      <EnvelopeAnimado isMobile={isMobile}>
         {children}
       </EnvelopeAnimado>
 
-      {/* Rodapé abaixo do envelope — fora do overflow:hidden */}
       {rodape && (
         <div style={{
           marginTop: '16px',
           textAlign: 'center',
-          fontSize: '14px',
-          fontWeight: 300,
+          fontSize: '14px', fontWeight: 300,
           fontFamily: 'Poppins, sans-serif',
           color: 'rgba(60,20,100,0.70)',
-          zIndex: 10,
-          position: 'relative',
+          zIndex: 10, position: 'relative',
         }}>
           {rodape}
         </div>
