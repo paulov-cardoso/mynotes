@@ -938,9 +938,13 @@ export function NotesPage() {
   const [destacado, setDestacado]               = useState<number | null>(null)
   const [confirmModal, setConfirmModal]         = useState<{ tipo: 'desazer' | 'destruir'; blocoId: number } | null>(null)
 
-  const [camX, setCamX] = useState(CANVAS_GAP)
-  const [camY, setCamY] = useState(CANVAS_GAP)
-  const [zoom, setZoom] = useState(() => window.innerWidth < 640 ? 0.45 : ZOOM_DEFAULT)
+  const [camX, setCamX] = useState(() => window.innerWidth < 640 ? 8 : CANVAS_GAP)
+  const [camY, setCamY] = useState(() => window.innerWidth < 640 ? 8 : CANVAS_GAP)
+  const [zoom, setZoom] = useState(() =>
+  window.innerWidth < 640
+    ? parseFloat((window.innerWidth / (2 * GRID_COL)).toFixed(2))
+    : ZOOM_DEFAULT
+  )
   const [zoomExpanded, setZoomExpanded] = useState(false)
 
   const [busca, setBusca]                 = useState('')
@@ -1077,7 +1081,14 @@ export function NotesPage() {
 
   function zoomIn()    { setZoom(z => Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(2))) }
   function zoomOut()   { setZoom(z => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(2))) }
-  function zoomReset() { setZoom(ZOOM_DEFAULT); setCamX(CANVAS_GAP); setCamY(CANVAS_GAP) }
+  function zoomReset() {
+    const defaultZoom = window.innerWidth < 640
+      ? parseFloat((window.innerWidth / (2 * GRID_COL)).toFixed(2))
+      : ZOOM_DEFAULT
+    setZoom(defaultZoom)
+    setCamX(CANVAS_GAP)
+    setCamY(CANVAS_GAP)
+  }
   function toggleBusca() { if (buscaExpanded) { setBuscaExpanded(false); setBusca('') } else { setBuscaExpanded(true) } }
 
   function iniciarDragNote(e: ReactMouseEvent, note: Note) {
@@ -1282,10 +1293,7 @@ export function NotesPage() {
           style={{
             position: 'absolute',
             bottom: 20,
-            ...(isMobile
-              ? { left: '50%', transform: 'translateX(-50%)', width: 'calc(100% - 48px)', justifyContent: 'center' }
-              : { right: 28 }
-            ),
+            right: 28,
             height: 44,
             borderRadius: 999,
             background: tokens.accent.gradientFab,
@@ -1294,7 +1302,7 @@ export function NotesPage() {
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            padding: isMobile ? '0 24px' : '0 20px',
+            padding: '0 20px',
             boxShadow: fabShadowNormal,
             zIndex: 60,
             transition: 'transform 0.2s, box-shadow 0.2s',
@@ -1304,16 +1312,12 @@ export function NotesPage() {
             color: tokens.accent.onAccent,
           }}
           onMouseEnter={e => {
-            if (!isMobile) {
-              e.currentTarget.style.transform = 'scale(1.05)'
-              e.currentTarget.style.boxShadow = fabShadowHover
-            }
+            e.currentTarget.style.transform = 'scale(1.05)'
+            e.currentTarget.style.boxShadow = fabShadowHover
           }}
           onMouseLeave={e => {
-            if (!isMobile) {
-              e.currentTarget.style.transform = 'scale(1)'
-              e.currentTarget.style.boxShadow = fabShadowNormal
-            }
+            e.currentTarget.style.transform = 'scale(1)'
+            e.currentTarget.style.boxShadow = fabShadowNormal
           }}
         >
           <LapisSVG />Criar novo note
@@ -1321,17 +1325,16 @@ export function NotesPage() {
 
         {/* ========== Painel de zoom ============= */}
         {!isMobile && (
-          // ... painel de zoom existente inteiro
            <div style={{ position: 'absolute', bottom: 100, right: 28, zIndex: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-          {zoomExpanded && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, animation: 'zoomExpand 0.18s ease-out' }}>
-              <BotaoZoom label="+" title="Aproximar" onClick={zoomIn} tokens={tokens} fontSize={20} />
-              <BotaoZoom label={`${Math.round(zoom * 100)}%`} title="Restaurar zoom" onClick={zoomReset} tokens={tokens} width={56} height={32} fontSize={11} />
-              <BotaoZoom label="-" title="Afastar" onClick={zoomOut} tokens={tokens} fontSize={20} />
+              {zoomExpanded && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, animation: 'zoomExpand 0.18s ease-out' }}>
+                  <BotaoZoom label="+" title="Aproximar" onClick={zoomIn} tokens={tokens} fontSize={20} />
+                  <BotaoZoom label={`${Math.round(zoom * 100)}%`} title="Restaurar zoom" onClick={zoomReset} tokens={tokens} width={56} height={32} fontSize={11} />
+                  <BotaoZoom label="-" title="Afastar" onClick={zoomOut} tokens={tokens} fontSize={20} />
+                </div>
+              )}
+              <button onClick={() => setZoomExpanded(v => !v)} title="Controles de zoom" style={{ width: 42, height: 42, borderRadius: '50%', background: zoomExpanded ? zoomBtnAtivo : zoomBtnInativo, border: `1px solid ${tokens.border.subtle}`, backdropFilter: 'blur(12px)', boxShadow: `0 2px 10px rgba(${tokens.shadowRgb},0.22)`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, transition: 'background 0.2s' }}>🎮</button>
             </div>
-          )}
-          <button onClick={() => setZoomExpanded(v => !v)} title="Controles de zoom" style={{ width: 42, height: 42, borderRadius: '50%', background: zoomExpanded ? zoomBtnAtivo : zoomBtnInativo, border: `1px solid ${tokens.border.subtle}`, backdropFilter: 'blur(12px)', boxShadow: `0 2px 10px rgba(${tokens.shadowRgb},0.22)`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, transition: 'background 0.2s' }}>🎮</button>
-        </div>
         )}
 
       </div>
