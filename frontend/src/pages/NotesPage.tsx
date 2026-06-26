@@ -1337,6 +1337,56 @@ export function NotesPage() {
             </div>
         )}
 
+        {/* ===== Dropdown de busca mobile ===== */}
+          {isMobile && buscaExpanded && busca && createPortal(
+            <div style={{
+              position: 'fixed',
+              top: 56,
+              left: 0,
+              right: 0,
+              zIndex: 200,
+              background: tokens.surface.glassStrong,
+              backdropFilter: 'blur(16px)',
+              borderBottom: `1px solid ${tokens.border.subtle}`,
+              maxHeight: 'calc(100vh - 56px)',
+              overflowY: 'auto',
+            }}>
+              {resultadosBusca.length === 0
+                ? <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 13, color: tokens.text.secondary, padding: '16px 20px', margin: 0 }}>
+                    Nenhum resultado para "{busca}"
+                  </p>
+                : <>
+                    <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 10, color: tokens.text.muted, padding: '10px 20px 4px', margin: 0, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      {resultadosBusca.length} resultado{resultadosBusca.length > 1 ? 's' : ''}
+                    </p>
+                    {resultadosBusca.map(n => {
+                      const qi = n.conteudo.toLowerCase().indexOf(busca.toLowerCase())
+                      const trecho = qi >= 0
+                        ? '...' + n.conteudo.slice(Math.max(0, qi - 20), qi + 60) + '...'
+                        : n.conteudo.slice(0, 80) + '...'
+                      return (
+                        <button
+                          key={n.id}
+                          onMouseDown={() => navegarAteNote(n)}
+                          style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', borderTop: `1px solid rgba(${tokens.shadowRgb},0.08)`, cursor: 'pointer', padding: '12px 20px', transition: 'background 0.15s' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = `rgba(${tokens.shadowRgb},0.07)` }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+                        >
+                          <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 13, fontWeight: 600, color: tokens.text.primary, margin: '0 0 3px' }}>
+                            {n.tituloCapa || n.titulo}
+                          </p>
+                          <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 11, color: tokens.text.muted, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {trecho}
+                          </p>
+                        </button>
+                      )
+                    })}
+                  </>
+              }
+            </div>,
+            document.body,
+          )}
+
       </div>
 
       {formarBlocoCardId !== null && <ModalFormarBloco tokens={tokens} onConfirmar={nome => formarBloco(formarBlocoCardId, nome)} onCancelar={() => setFormarBlocoCardId(null)} />}
