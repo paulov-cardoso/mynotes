@@ -10,6 +10,7 @@ router.use(authenticate)
 router.get('/', listarNotes)
 router.post('/', uploadImagemCapa, criarNote)
 router.put('/:id/posicao', atualizarPosicao)
+router.put('/:id', authMiddleware, upload.single('imagemCapa'), notesController.atualizar)
 router.delete('/:id', excluirNote)
 
 export default router

@@ -80,3 +80,32 @@ export async function excluirNote(req: AuthRequest, res: Response) {
 
   res.json({ ok: true })
 }
+
+export async function atualizar(req: Request, res: Response) {
+  const userId = (req as any).userId as string
+  const id     = Number(req.params.id)
+
+  const note = await prisma.note.findUnique({ where: { id } })
+  if (!note || note.userId !== userId) {
+    return res.status(404).json({ erro: 'Note não encontrado.' })
+  }
+
+  const titulo   = req.body.titulo   ?? note.titulo
+  const conteudo = req.body.conteudo ?? note.conteudo
+  const cor      = req.body.cor      ?? note.cor
+
+  // Se veio nova imagem, usa o novo caminho; se veio flag de remoção, zera; senão mantém
+  let imagemCapa = note.imagemCapa
+  if (req.file) {
+    imagemCapa = `/uploads/notes/${req.file.filename}`
+  } else if (req.body.removerImagem === 'true') {
+    imagemCapa = null
+  }
+
+  const atualizado = await prisma.note.update({
+    where: { id },
+    data:  { titulo, conteudo, cor, imagemCapa },
+  })
+
+  return res.json({ note: atualizado })
+}
