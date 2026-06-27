@@ -95,7 +95,8 @@ export const api = {
   },
 
   async put<T>(path: string, body: unknown): Promise<T> {
-    const res = await apiFetch(path, { method: 'PUT', body: JSON.stringify(body) })
+    const ehFormData = body instanceof FormData
+    const res = await apiFetch(path, { method: 'PUT', body: ehFormData ? body : JSON.stringify(body) })
     if (!res.ok) throw new Error(`PUT ${path} falhou: ${res.status}`)
     return res.json()
   },

@@ -338,6 +338,7 @@ interface CardDropdownProps {
   pos: DropdownPos | null; tokens: ThemeTokens; blocos: Bloco[]
   onFormarBloco: () => void; onCliparEmBloco: (blocoId: number) => void
   onExcluir: () => void; onFechar: () => void
+  onEditar: () => void
 }
 
 function CardDropdown({ pos, tokens, blocos, onFormarBloco, onCliparEmBloco, onExcluir, onFechar }: CardDropdownProps) {
@@ -369,9 +370,17 @@ function CardDropdown({ pos, tokens, blocos, onFormarBloco, onCliparEmBloco, onE
     <>
       <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onMouseDown={e => { e.stopPropagation(); onFechar(); setCliparPos(null) }} />
       <div style={{ position: 'fixed', top, bottom: bot, left: pos.left, background: tokens.surface.glassStrong, backdropFilter: 'blur(16px)', borderRadius: 12, padding: '5px 4px', minWidth: 180, boxShadow: `0 8px 32px rgba(${tokens.shadowRgb},0.25)`, border: `1px solid ${tokens.border.subtle}`, zIndex: 9999, animation: 'dropdownOpen 0.14s cubic-bezier(0.34,1.56,0.64,1) forwards' }} onMouseDown={e => e.stopPropagation()}>
+        
+        <button style={itemStyle()} onClick={e => { e.stopPropagation(); onEditar(); onFechar() }}
+          onMouseEnter={e => { e.currentTarget.style.background = `rgba(${tokens.shadowRgb},0.07)` }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+          <span style={{ fontSize: 12 }}>✏️</span> Editar note
+        </button>
+
         <button style={itemStyle()} onClick={e => { e.stopPropagation(); onFormarBloco(); onFechar() }} onMouseEnter={e => { e.currentTarget.style.background = `rgba(${tokens.shadowRgb},0.07)` }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
           <span style={{ fontSize: 12 }}>🧱</span> Formar bloco
         </button>
+
         {blocos.length > 0 && (
           <button ref={cliparBtnRef} style={{ ...itemStyle(), justifyContent: 'space-between' }} onClick={abrirClipar} onMouseEnter={e => { e.currentTarget.style.background = `rgba(${tokens.shadowRgb},0.07)` }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 12 }}>📎</span> Clipar em bloco</span>
@@ -443,6 +452,7 @@ interface PostItProps {
   onAbrir: () => void; onDragStart: (e: ReactMouseEvent) => void
   onDropdownToggle: (e: ReactMouseEvent) => void; onFormarBloco: () => void
   onCliparEmBloco: (blocoId: number) => void; onExcluir: () => void; onDropdownFechar: () => void
+  onEditar: () => void
 }
 
 function PostIt({ note, posX, posY, isDragging, isSnapBack, destacado, isNew, dropdownAberto, blocos, zoom, tokens, onAbrir, onDragStart, onDropdownToggle, onFormarBloco, onCliparEmBloco, onExcluir, onDropdownFechar }: PostItProps) {
@@ -492,7 +502,7 @@ function PostIt({ note, posX, posY, isDragging, isSnapBack, destacado, isNew, dr
       </div>
       <button ref={dropBtnRef} onClick={e => { e.stopPropagation(); onDropdownToggle(e) }} onMouseDown={e => e.stopPropagation()} style={{ position: 'absolute', bottom: 10, right: 10, width: 26, height: 26, borderRadius: '50%', background: 'rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: temFoto ? '#fff' : isEscuro(note.cor) ? '#fff' : tokens.text.primary, fontSize: 15, zIndex: 10, transition: 'background 0.15s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.22)' }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.12)' }}>⋯</button>
       {dropdownAberto && dropdownPos && (
-        <CardDropdown pos={dropdownPos} tokens={tokens} blocos={blocos} onFormarBloco={onFormarBloco} onCliparEmBloco={onCliparEmBloco} onExcluir={onExcluir} onFechar={onDropdownFechar} />
+        <CardDropdown pos={dropdownPos} tokens={tokens} blocos={blocos} onFormarBloco={onFormarBloco} onCliparEmBloco={onCliparEmBloco} onExcluir={onExcluir} onFechar={onDropdownFechar} onEditar={onEditar} />
       )}
     </div>
   )
@@ -578,34 +588,49 @@ function BlocoTorre({ bloco, posX, posY, isDragging, dragPos, dropdownAberto, zo
   )
 }
 
-// ─── ModalBloco ───────────────────────────────────────────────────────────────
 
+// ─── ModalBloco ───────────────────────────────────────────────────────────────
 interface ModalBlocoProps {
-  bloco: Bloco; tokens: ThemeTokens; onFechar: () => void; onRemoverCard: (cardId: number) => void
+  bloco: Bloco; tokens: ThemeTokens
+  onFechar: () => void
+  onRemoverCard: (cardId: number) => void
+  onEditarCard: (note: Note) => void
 }
 
-function ModalBloco({ bloco, tokens, onFechar, onRemoverCard }: ModalBlocoProps) {
+function ModalBloco({ bloco, tokens, onFechar, onRemoverCard, onEditarCard }: ModalBlocoProps) {
   const cards = bloco.cards
-  const [idx, setIdx] = useState(0)
-  const [animando, setAnimando] = useState(false)
-  const [girando, setGirando] = useState<'avancar' | 'voltar' | null>(null)
+  const [idx, setIdx]         = useState(0)
+  const [fase, setFase]       = useState<'idle' | 'virando' | 'chegando'>('idle')
+  const [direcao, setDirecao] = useState<'avancar' | 'voltar'>('avancar')
+  const [idxSaindo, setIdxSaindo] = useState<number | null>(null)
 
   useEffect(() => { if (idx >= cards.length && cards.length > 0) setIdx(cards.length - 1) }, [cards.length, idx])
   if (cards.length === 0) return null
 
   const podAvancar = idx < cards.length - 1
   const podVoltar  = idx > 0
+  const animando   = fase !== 'idle'
+
+  // Duração de cada sub-fase em ms
+  const T_VIRA  = 320  // card atual gira até 90° (some)
+  const T_CHEGA = 320  // próximo card chega de 90° até 0°
 
   function avancar() {
     if (animando || !podAvancar) return
-    setGirando('avancar'); setAnimando(true)
-    setTimeout(() => { setIdx(prev => prev + 1); setGirando(null); setTimeout(() => setAnimando(false), 350) }, 380)
+    setDirecao('avancar'); setIdxSaindo(idx); setFase('virando')
+    setTimeout(() => {
+      setIdx(prev => prev + 1); setFase('chegando')
+      setTimeout(() => { setFase('idle'); setIdxSaindo(null) }, T_CHEGA)
+    }, T_VIRA)
   }
 
   function voltar() {
     if (animando || !podVoltar) return
-    setGirando('voltar'); setAnimando(true)
-    setTimeout(() => { setIdx(prev => prev - 1); setGirando(null); setTimeout(() => setAnimando(false), 350) }, 380)
+    setDirecao('voltar'); setIdxSaindo(idx); setFase('virando')
+    setTimeout(() => {
+      setIdx(prev => prev - 1); setFase('chegando')
+      setTimeout(() => { setFase('idle'); setIdxSaindo(null) }, T_CHEGA)
+    }, T_VIRA)
   }
 
   const card    = cards[idx]
@@ -613,31 +638,71 @@ function ModalBloco({ bloco, tokens, onFechar, onRemoverCard }: ModalBlocoProps)
   const bg      = temFoto ? '#1a0f2e' : (card.cor || '#ffffff')
   const tx      = temFoto || isEscuro(card.cor) ? 'rgba(255,255,255,0.92)' : 'rgba(0,0,0,0.82)'
   const sub     = temFoto || isEscuro(card.cor) ? 'rgba(255,255,255,0.50)' : 'rgba(0,0,0,0.42)'
-  const pilhaEsquerda = cards.slice(0, idx)
-  const lequeDireito  = cards.slice(idx + 1)
+
+  // Cor detrás dos cards
+  function versoCor(c: typeof card) {
+    if (c.imagemCapa) return '#b0aab8'   // neutro para card com foto
+    return ajustarLuminosidade(c.cor || '#6366f1', 0.35)  // versão escura da cor
+  }
+
+  // Pilha de cards
+  const lequeDireito = cards.slice(idx + 1)
+
+  // Card que está virando
+  const cardSaindo = idxSaindo !== null ? cards[idxSaindo] : null
+
+  // Animação do card principal
+  let cardAnim: string | undefined
+  if (fase === 'virando') {
+    cardAnim = direcao === 'avancar' ? 'paginaVira 0.32s ease-in forwards' : 'paginaViraVoltar 0.32s ease-in forwards'
+  } else if (fase === 'chegando') {
+    cardAnim = direcao === 'avancar' ? 'paginaChega 0.32s ease-out forwards' : 'paginaChegaVoltar 0.32s ease-out forwards'
+  } else {
+    cardAnim = idx === 0 ? 'modalEntrar 0.22s ease-out forwards' : undefined
+  }
 
   return (
     <>
       <style>{`
-        @keyframes livroVirar { 0% { transform: perspective(1200px) rotateY(0deg); } 100% { transform: perspective(1200px) rotateY(-180deg); } }
-        @keyframes livroVoltarFrente { 0% { transform: perspective(1200px) rotateY(-180deg); } 100% { transform: perspective(1200px) rotateY(0deg); } }
-        @keyframes livroEntrarDireita { 0% { transform: perspective(1200px) rotateY(25deg) translateX(30px); opacity: 0.4; } 100% { transform: perspective(1200px) rotateY(0deg) translateX(0); opacity: 1; } }
-        @keyframes livroEntrarEsquerda { 0% { transform: perspective(1200px) rotateY(-25deg) translateX(-30px); opacity: 0.4; } 100% { transform: perspective(1200px) rotateY(0deg) translateX(0); opacity: 1; } }
+        @keyframes paginaVira       { from { transform: perspective(1000px) rotateY(  0deg); } to { transform: perspective(1000px) rotateY(-90deg); } }
+        @keyframes paginaViraVoltar { from { transform: perspective(1000px) rotateY(  0deg); } to { transform: perspective(1000px) rotateY( 90deg); } }
+        @keyframes paginaChega      { from { transform: perspective(1000px) rotateY( 90deg); } to { transform: perspective(1000px) rotateY(  0deg); } }
+        @keyframes paginaChegaVoltar{ from { transform: perspective(1000px) rotateY(-90deg); } to { transform: perspective(1000px) rotateY(  0deg); } }
       `}</style>
+
       <div onClick={onFechar} style={{ position: 'fixed', inset: 0, zIndex: 99998, background: `rgba(${tokens.shadowRgb},0.12)`, backdropFilter: 'blur(10px)' }} />
+
       <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', gap: 20 }}>
-        <div onClick={e => e.stopPropagation()} style={{ position: 'relative', width: 580, height: 520, pointerEvents: 'auto' }}>
-          {pilhaEsquerda.map((c, i) => {
-            const dist = pilhaEsquerda.length - 1 - i
-            const lBg = c.imagemCapa ? { backgroundImage: `url(${c.imagemCapa})`, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: c.cor || '#6366f1' }
-            return <div key={c.id} style={{ position: 'absolute', inset: 0, borderRadius: 20, ...lBg, border: `1px solid ${tokens.border.subtle}`, boxShadow: `0 4px 16px rgba(${tokens.shadowRgb},0.25)`, transform: `perspective(1200px) rotateY(-180deg) translateX(${-dist * 6}px) translateY(${dist * 3}px)`, transformOrigin: 'left center', zIndex: i + 1, overflow: 'hidden' }}><div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.72)', borderRadius: 20 }} /></div>
-          })}
+
+        {/* Container da carta com perspective no pai para efeito 3D correto */}
+        <div onClick={e => e.stopPropagation()} style={{ position: 'relative', width: 580, height: 520, pointerEvents: 'auto', perspective: '1200px' }}>
+
+          {/* Pilha direita (próximos cards) */}
           {lequeDireito.map((c, i) => {
-            const lBg = c.imagemCapa ? { backgroundImage: `url(${c.imagemCapa})`, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: c.cor || '#6366f1' }
-            return <div key={c.id} style={{ position: 'absolute', inset: 0, borderRadius: 20, ...lBg, border: `1px solid ${tokens.border.subtle}`, boxShadow: `0 8px 32px rgba(${tokens.shadowRgb},0.25)`, transform: `translateX(${(i + 1) * 21}px) translateY(${(i + 1) * 4}px) scale(${1 - (i + 1) * 0.025})`, transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)', zIndex: 3 - Math.min(i, 2), overflow: 'hidden' }}><div style={{ position: 'absolute', inset: 0, background: `rgba(0,0,0,${0.3 + i * 0.08})`, borderRadius: 20 }} /></div>
+            const lBg = c.imagemCapa
+              ? { backgroundImage: `url(${c.imagemCapa})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+              : { background: c.cor || '#6366f1' }
+            return (
+              <div key={c.id} style={{ position: 'absolute', inset: 0, borderRadius: 20, ...lBg, border: `1px solid ${tokens.border.subtle}`, boxShadow: `0 8px 32px rgba(${tokens.shadowRgb},0.25)`, transform: `translateX(${(i + 1) * 18}px) translateY(${(i + 1) * 4}px) scale(${1 - (i + 1) * 0.025})`, zIndex: 2 - Math.min(i, 1), overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', inset: 0, background: `rgba(0,0,0,${0.28 + i * 0.08})`, borderRadius: 20 }} />
+              </div>
+            )
           })}
-          <div style={{ position: 'absolute', inset: 0, borderRadius: 20, background: bg, boxShadow: `0 24px 80px rgba(${tokens.shadowRgb},0.45)`, overflow: 'hidden', zIndex: 50, transformOrigin: 'left center', animation: girando === 'avancar' ? 'livroVirar 0.38s cubic-bezier(0.4,0,0.6,1) forwards' : girando === 'voltar' ? 'livroVoltarFrente 0.38s cubic-bezier(0.4,0,0.6,1) forwards' : idx === 0 ? 'modalEntrar 0.22s ease-out forwards' : podVoltar && !animando ? 'livroEntrarDireita 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'livroEntrarEsquerda 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards', display: 'flex', flexDirection: 'column' }}>
-            {temFoto && <div style={{ height: 200, flexShrink: 0, background: `url(${card.imagemCapa}) center/cover`, position: 'relative' }}><div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,rgba(0,0,0,0.1) 0%,rgba(26,15,46,0.95) 100%)' }} /></div>}
+
+          {/* Verso do card saindo — aparece durante fase 'virando', fica fixo */}
+          {cardSaindo && fase === 'virando' && (
+            <div style={{ position: 'absolute', inset: 0, borderRadius: 20, background: versoCor(cardSaindo), border: `1px solid rgba(255,255,255,0.15)`, boxShadow: `0 24px 80px rgba(${tokens.shadowRgb},0.45)`, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PrendedorSVG width={48} />
+            </div>
+          )}
+
+          {/* Card principal — frente com conteúdo */}
+          <div style={{ position: 'absolute', inset: 0, borderRadius: 20, background: bg, boxShadow: `0 24px 80px rgba(${tokens.shadowRgb},0.45)`, overflow: 'hidden', zIndex: 50, transformOrigin: 'center center', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', animation: cardAnim, display: 'flex', flexDirection: 'column' }}>
+            {temFoto && (
+              <div style={{ height: 200, flexShrink: 0, background: `url(${card.imagemCapa}) center/cover`, position: 'relative' }}>
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,rgba(0,0,0,0.1) 0%,rgba(26,15,46,0.95) 100%)' }} />
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '20px 24px 0', flexShrink: 0 }}>
               <button onClick={onFechar} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tx, opacity: 0.4, fontSize: 18 }}>✕</button>
             </div>
@@ -648,22 +713,39 @@ function ModalBloco({ bloco, tokens, onFechar, onRemoverCard }: ModalBlocoProps)
             <div style={{ padding: '14px 24px', overflowY: 'auto', flex: 1 }}>
               <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 14, lineHeight: 1.8, color: tx, margin: 0, whiteSpace: 'pre-wrap' }}>{card.conteudo}</p>
             </div>
+            {/* Botões na base */}
             <div style={{ padding: '14px 24px 20px', flexShrink: 0, display: 'flex', gap: 8, borderTop: `1px solid rgba(${tokens.shadowRgb},0.10)` }}>
-              <button onClick={() => onRemoverCard(card.id)} style={{ flex: 1, padding: '9px', borderRadius: 10, background: `rgba(${tokens.danger.rgb},0.10)`, border: `1px solid rgba(${tokens.danger.rgb},0.25)`, cursor: 'pointer', fontFamily: typography.fontFamily.primary, fontSize: 12, fontWeight: 600, color: tokens.danger.text }}>Remover do bloco</button>
+              <button onClick={() => onEditarCard(card)} style={{ flex: 1, padding: '9px', borderRadius: 10, background: `rgba(${tokens.shadowRgb},0.08)`, border: `1px solid ${tokens.border.subtle}`, cursor: 'pointer', fontFamily: typography.fontFamily.primary, fontSize: 12, fontWeight: 600, color: tokens.text.primary }}>
+                ✏️ Editar note
+              </button>
+              <button onClick={() => onRemoverCard(card.id)} style={{ flex: 1, padding: '9px', borderRadius: 10, background: `rgba(${tokens.danger.rgb},0.10)`, border: `1px solid rgba(${tokens.danger.rgb},0.25)`, cursor: 'pointer', fontFamily: typography.fontFamily.primary, fontSize: 12, fontWeight: 600, color: tokens.danger.text }}>
+                Remover do bloco
+              </button>
             </div>
           </div>
+
         </div>
+
+        {/* Navegação */}
         <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 20, pointerEvents: 'auto' }}>
-          <button onClick={voltar} disabled={!podVoltar || animando} style={{ width: 38, height: 38, borderRadius: '50%', background: tokens.surface.glass, backdropFilter: 'blur(8px)', border: `1px solid ${tokens.border.subtle}`, cursor: !podVoltar ? 'default' : 'pointer', color: tokens.text.primary, fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: !podVoltar ? 0.2 : 1, transition: 'background 0.15s' }} onMouseEnter={e => { if (podVoltar) e.currentTarget.style.background = tokens.surface.glassHover }} onMouseLeave={e => { e.currentTarget.style.background = tokens.surface.glass }}>‹</button>
+          <button onClick={voltar} disabled={!podVoltar || animando}
+            style={{ width: 38, height: 38, borderRadius: '50%', background: tokens.surface.glass, backdropFilter: 'blur(8px)', border: `1px solid ${tokens.border.subtle}`, cursor: !podVoltar ? 'default' : 'pointer', color: tokens.text.primary, fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: !podVoltar ? 0.2 : 1, transition: 'background 0.15s' }}
+            onMouseEnter={e => { if (podVoltar) e.currentTarget.style.background = tokens.surface.glassHover }}
+            onMouseLeave={e => { e.currentTarget.style.background = tokens.surface.glass }}>‹</button>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             {cards.map((_, i) => <div key={i} style={{ width: i === idx ? 16 : 5, height: 5, borderRadius: 3, background: i === idx ? tokens.accent.solid : tokens.border.subtle, transition: 'width 0.2s, background 0.2s' }} />)}
           </div>
-          <button onClick={avancar} disabled={!podAvancar || animando} style={{ width: 38, height: 38, borderRadius: '50%', background: tokens.surface.glass, backdropFilter: 'blur(8px)', border: `1px solid ${tokens.border.subtle}`, cursor: !podAvancar ? 'default' : 'pointer', color: tokens.text.primary, fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: !podAvancar ? 0.2 : 1, transition: 'background 0.15s' }} onMouseEnter={e => { if (podAvancar) e.currentTarget.style.background = tokens.surface.glassHover }} onMouseLeave={e => { e.currentTarget.style.background = tokens.surface.glass }}>›</button>
+          <button onClick={avancar} disabled={!podAvancar || animando}
+            style={{ width: 38, height: 38, borderRadius: '50%', background: tokens.surface.glass, backdropFilter: 'blur(8px)', border: `1px solid ${tokens.border.subtle}`, cursor: !podAvancar ? 'default' : 'pointer', color: tokens.text.primary, fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: !podAvancar ? 0.2 : 1, transition: 'background 0.15s' }}
+            onMouseEnter={e => { if (podAvancar) e.currentTarget.style.background = tokens.surface.glassHover }}
+            onMouseLeave={e => { e.currentTarget.style.background = tokens.surface.glass }}>›</button>
         </div>
       </div>
     </>
   )
 }
+
+
 
 // ─── ModalFormarBloco ─────────────────────────────────────────────────────────
 
@@ -771,6 +853,193 @@ function ModalLeitura({ note, tokens, onFechar, onExcluido }: ModalLeituraProps)
       </div>
       {confirmExcluir && <ModalConfirm titulo="Excluir note?" descricao="Este note sera removido permanentemente. Esta acao nao pode ser desfeita." labelConfirmar="Excluir" tokens={tokens} onConfirmar={excluir} onCancelar={() => setConfirmExcluir(false)} />}
     </>
+  )
+}
+
+
+// ─── ModalEditar ──────────────────────────────────────────────────────────────
+
+interface ModalEditarProps {
+  note: Note
+  tokens: ThemeTokens
+  onFechar: () => void
+  onAtualizado: (note: Note) => void
+}
+
+function ModalEditar({ note, tokens, onFechar, onAtualizado }: ModalEditarProps) {
+  const [titulo,       setTitulo]       = useState(note.titulo)
+  const [conteudo,     setConteudo]     = useState(note.conteudo)
+  const [corBase,      setCorBase]      = useState<string | null>(() => {
+    // tenta achar a cor base da paleta mais próxima; se for branco, null
+    if (!note.cor || note.cor === '#ffffff') return null
+    return PALETA_BASE.find(p => note.cor.startsWith(p.hex.slice(0, 4))) ?.hex ?? note.cor
+  })
+  const [luminosidade, setLuminosidade] = useState(() => {
+    if (!note.cor || note.cor === '#ffffff') return 0.45
+    return getLuminosidadeBase(note.cor)
+  })
+  const [erro,    setErro]    = useState('')
+  const [salvando, setSalvando] = useState(false)
+
+  const [fotoPreview, setFotoPreview] = useState<string | null>(note.imagemCapa ?? null)
+  const [fotoArquivo, setFotoArquivo] = useState<File | null>(null)
+  const [removerImagem, setRemoverImagem] = useState(false)
+  const inputFotoRef = useRef<HTMLInputElement>(null)
+  const sliderRef    = useRef<HTMLDivElement>(null)
+  const arrastando   = useRef(false)
+
+  const corFinal    = corBase ? ajustarLuminosidade(corBase, luminosidade) : '#ffffff'
+  const fundoEscuro = luminosidade < 0.55 && corBase !== null
+  const textoEl     = fundoEscuro ? 'rgba(255,255,255,0.92)' : 'rgba(0,0,0,0.80)'
+  const inputBg     = fundoEscuro ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)'
+
+  const calcLum = useCallback((cy: number) => {
+    const r = sliderRef.current?.getBoundingClientRect(); if (!r) return
+    setLuminosidade(Math.max(0.15, Math.min(0.85, 1 - (cy - r.top) / r.height)))
+  }, [])
+
+  useEffect(() => {
+    const onM = (e: MouseEvent) => { if (arrastando.current) calcLum(e.clientY) }
+    const onU = () => { arrastando.current = false }
+    window.addEventListener('mousemove', onM)
+    window.addEventListener('mouseup',   onU)
+    return () => { window.removeEventListener('mousemove', onM); window.removeEventListener('mouseup', onU) }
+  }, [calcLum])
+
+  function onEscolherCor(hex: string) {
+    if (corBase === hex) { setCorBase(null); setLuminosidade(0.45) }
+    else { setCorBase(hex); setLuminosidade(getLuminosidadeBase(hex)) }
+  }
+
+  function onEscolherFoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const arquivo = e.target.files?.[0]; if (!arquivo) return
+    setFotoArquivo(arquivo)
+    setRemoverImagem(false)
+    const leitor = new FileReader()
+    leitor.onload = ev => setFotoPreview(ev.target?.result as string)
+    leitor.readAsDataURL(arquivo)
+  }
+
+  function removerFoto() {
+    setFotoPreview(null)
+    setFotoArquivo(null)
+    setRemoverImagem(true)
+    if (inputFotoRef.current) inputFotoRef.current.value = ''
+  }
+
+  async function salvar() {
+    if (!titulo.trim())   { setErro('Título obrigatório.');  return }
+    if (!conteudo.trim()) { setErro('Conteúdo obrigatório.'); return }
+    setSalvando(true); setErro('')
+
+    // Atualização otimista imediata
+    const noteOtimista: Note = {
+      ...note,
+      titulo:     titulo.trim(),
+      conteudo:   conteudo.trim(),
+      cor:        corFinal,
+      imagemCapa: fotoPreview,   // base64 local ou null
+    }
+    onAtualizado(noteOtimista)   // fecha o modal e atualiza o canvas na hora
+
+    // Persistência em background
+    try {
+      let data: { note: Note }
+      if (fotoArquivo) {
+        const form = new FormData()
+        form.append('titulo',    titulo.trim())
+        form.append('conteudo',  conteudo.trim())
+        form.append('cor',       corFinal)
+        form.append('imagemCapa', fotoArquivo)
+        data = await api.put<{ note: Note }>(`/notes/${note.id}`, form)
+      } else {
+        data = await api.put<{ note: Note }>(`/notes/${note.id}`, {
+          titulo:        titulo.trim(),
+          conteudo:      conteudo.trim(),
+          cor:           corFinal,
+          removerImagem: removerImagem ? 'true' : undefined,
+        })
+      }
+      // Substitui o otimista pelo dado real do servidor (URL de imagem definitiva)
+      onAtualizado(data.note)
+    } catch {
+      setErro('Erro ao salvar. Tente novamente.')
+      setSalvando(false)
+    }
+  }
+
+  const indPct = (1 - (luminosidade - 0.15) / 0.70) * 100
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: `rgba(${tokens.shadowRgb},0.12)`, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: corFinal, borderRadius: 16, width: '100%', maxWidth: 500, boxShadow: `0 24px 64px rgba(${tokens.shadowRgb},0.35)`, overflow: 'hidden', transition: 'background 0.25s', border: '1px solid rgba(255,255,255,0.50)' }} onClick={e => e.stopPropagation()}>
+
+        {fotoPreview && (
+          <div style={{ position: 'relative', height: 160, background: `url(${fotoPreview}) center/cover` }}>
+            <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to bottom,transparent 40%,rgba(${tokens.shadowRgb},0.55) 100%)` }} />
+            <button onClick={removerFoto} style={{ position: 'absolute', top: 10, right: 10, background: `rgba(${tokens.shadowRgb},0.5)`, border: 'none', borderRadius: '50%', width: 28, height: 28, color: 'white', cursor: 'pointer', fontSize: 14 }}>✕</button>
+          </div>
+        )}
+
+        <div style={{ padding: 24 }}>
+          <style>{`.edit-input::placeholder{color:${fundoEscuro ? 'rgba(255,255,255,0.38)' : 'rgba(0,0,0,0.30)'}}`}</style>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ fontFamily: typography.fontFamily.primary, fontSize: 15, fontWeight: 700, color: textoEl, margin: 0 }}>Editar Note</h3>
+            <button onClick={onFechar} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: textoEl, opacity: 0.5 }}>✕</button>
+          </div>
+
+          <input className="edit-input" type="text" placeholder="Título..." value={titulo} onChange={e => setTitulo(e.target.value)}
+            style={{ width: '100%', border: 'none', background: inputBg, borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: typography.fontFamily.primary, fontWeight: 600, color: textoEl, marginBottom: 10, boxSizing: 'border-box', outline: 'none' }} />
+          <textarea className="edit-input" placeholder="O que está na sua cabeça?" value={conteudo} onChange={e => setConteudo(e.target.value)} rows={4}
+            style={{ width: '100%', border: 'none', background: inputBg, borderRadius: 8, padding: '10px 12px', fontSize: 13, fontFamily: typography.fontFamily.primary, color: textoEl, resize: 'none', marginBottom: 16, boxSizing: 'border-box', outline: 'none' }} />
+
+          <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 11, fontWeight: 600, color: textoEl, opacity: 0.55, marginBottom: 8, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Cor do card</p>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 20 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, flex: 1 }}>
+              <button onClick={() => { setCorBase(null); setLuminosidade(0.45) }} title="Padrão"
+                style={{ width: 28, height: 28, borderRadius: '50%', background: '#ffffff', border: corBase === null ? '3px solid #7c5ab8' : '2px solid #d1d5db', cursor: 'pointer', transform: corBase === null ? 'scale(1.2)' : 'scale(1)', transition: 'transform 0.15s' }} />
+              {PALETA_BASE.map(({ hex, nome }) => (
+                <button key={hex} onClick={() => onEscolherCor(hex)} title={nome}
+                  style={{ width: 28, height: 28, borderRadius: '50%', background: hex, border: corBase === hex ? '3px solid rgba(255,255,255,0.9)' : '2px solid rgba(255,255,255,0.4)', cursor: 'pointer', transform: corBase === hex ? 'scale(1.2)' : 'scale(1)', transition: 'transform 0.15s', boxShadow: corBase === hex ? '0 0 0 2px rgba(0,0,0,0.18)' : 'none' }} />
+              ))}
+            </div>
+            {corBase && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontFamily: typography.fontFamily.primary, fontSize: 9, color: textoEl, opacity: 0.5 }}>clar</span>
+                <div ref={sliderRef} onMouseDown={e => { arrastando.current = true; calcLum(e.clientY) }} onClick={e => calcLum(e.clientY)}
+                  style={{ width: 20, height: 100, borderRadius: 10, cursor: 'ns-resize', position: 'relative', background: `linear-gradient(to bottom,${ajustarLuminosidade(corBase, 0.85)},${ajustarLuminosidade(corBase, 0.45)},${ajustarLuminosidade(corBase, 0.15)})`, boxShadow: '0 2px 8px rgba(0,0,0,0.18)' }}>
+                  <div style={{ position: 'absolute', left: '50%', top: `${indPct}%`, transform: 'translate(-50%,-50%)', width: 18, height: 18, borderRadius: '50%', background: corFinal, border: '2px solid white', boxShadow: '0 1px 4px rgba(0,0,0,0.3)', pointerEvents: 'none' }} />
+                </div>
+                <span style={{ fontFamily: typography.fontFamily.primary, fontSize: 9, color: textoEl, opacity: 0.5 }}>esc</span>
+              </div>
+            )}
+          </div>
+
+          <p style={{ fontFamily: typography.fontFamily.primary, fontSize: 11, fontWeight: 600, color: textoEl, opacity: 0.55, marginBottom: 8, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Foto de capa</p>
+          <input ref={inputFotoRef} type="file" accept="image/*" onChange={onEscolherFoto} style={{ display: 'none' }} id="upload-foto-edit" />
+
+          {!fotoPreview
+            ? <label htmlFor="upload-foto-edit" style={{ display: 'flex', alignItems: 'center', gap: 8, background: inputBg, borderRadius: 8, padding: '10px 14px', cursor: 'pointer', marginBottom: 20, border: `1.5px dashed ${textoEl}` }}>
+                <span style={{ fontSize: 18 }}>🖼️</span>
+                <span style={{ fontFamily: typography.fontFamily.primary, fontSize: 12, color: textoEl, opacity: 0.65 }}>Clique para adicionar uma foto</span>
+              </label>
+            : <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+                <img src={fotoPreview} alt="preview" style={{ width: 48, height: 36, objectFit: 'cover', borderRadius: 6 }} />
+                <span style={{ fontFamily: typography.fontFamily.primary, fontSize: 12, color: textoEl, opacity: 0.8, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fotoArquivo?.name ?? 'foto atual'}</span>
+                <button onClick={removerFoto} style={{ background: 'none', border: 'none', cursor: 'pointer', color: tokens.danger.text, fontSize: 16 }}>✕</button>
+              </div>
+          }
+
+          {erro && <p style={{ color: tokens.danger.text, fontSize: 12, fontFamily: typography.fontFamily.primary, marginBottom: 12 }}>{erro}</p>}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={onFechar} style={{ flex: 1, padding: 10, borderRadius: 8, background: inputBg, border: 'none', cursor: 'pointer', fontFamily: typography.fontFamily.primary, fontSize: 13, fontWeight: 600, color: textoEl, opacity: 0.8 }}>Cancelar</button>
+            <button onClick={salvar} disabled={salvando} style={{ flex: 1, padding: 10, borderRadius: 8, background: `rgba(${tokens.shadowRgb},0.15)`, border: `1.5px solid ${tokens.accent.solid}`, cursor: 'pointer', fontFamily: typography.fontFamily.primary, fontSize: 13, fontWeight: 700, color: fundoEscuro ? 'white' : tokens.text.primary, opacity: salvando ? 0.6 : 1 }}>
+              {salvando ? 'Salvando...' : 'Salvar alterações'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -937,6 +1206,7 @@ export function NotesPage() {
   const [snapBackId, setSnapBackId]             = useState<number | null>(null)
   const [destacado, setDestacado]               = useState<number | null>(null)
   const [confirmModal, setConfirmModal]         = useState<{ tipo: 'desazer' | 'destruir'; blocoId: number } | null>(null)
+  const [noteEditando, setNoteEditando] = useState<Note | null>(null)
 
   const [camX, setCamX] = useState(() => window.innerWidth < 640 ? 8 : CANVAS_GAP)
   const [camY, setCamY] = useState(() => window.innerWidth < 640 ? 8 : CANVAS_GAP)
@@ -1153,6 +1423,15 @@ export function NotesPage() {
 
   function onNoteExcluido(id: number) { setNotes(prev => prev.filter(n => n.id !== id)); setNoteLendo(null) }
 
+  function onNoteAtualizado(note: Note) {
+    setNotes(prev => prev.map(n =>
+      n.id === note.id
+        ? { ...note, data: n.data, canvasX: n.canvasX, canvasY: n.canvasY, canvasOrdem: n.canvasOrdem }
+        : n
+    ))
+    setNoteEditando(prev => prev?.id === note.id ? null : prev)
+  }
+
   const notesEmBlocos = useMemo(() => new Set(blocos.flatMap(b => b.cardIds)), [blocos])
 
   const notesVisiveis = useMemo(() => {
@@ -1233,6 +1512,7 @@ export function NotesPage() {
                 onCliparEmBloco={blocoId => cliparEmBloco(note.id, blocoId)}
                 onExcluir={() => excluirNote(note.id)}
                 onDropdownFechar={() => setDropdownCardId(null)}
+                onEditar={() => { setNoteEditando(note); setDropdownCardId(null) }}
               />
             )
           })}
@@ -1390,7 +1670,15 @@ export function NotesPage() {
       </div>
 
       {formarBlocoCardId !== null && <ModalFormarBloco tokens={tokens} onConfirmar={nome => formarBloco(formarBlocoCardId, nome)} onCancelar={() => setFormarBlocoCardId(null)} />}
-      {modalBlocoAberto && <ModalBloco bloco={modalBlocoAberto} tokens={tokens} onFechar={() => setModalBlocoAberto(null)} onRemoverCard={cardId => removerCardDoBloco(modalBlocoAberto.id, cardId)} />}
+      {modalBlocoAberto && (
+        <ModalBloco
+          bloco={modalBlocoAberto}
+          tokens={tokens}
+          onFechar={() => setModalBlocoAberto(null)}
+          onRemoverCard={cardId => removerCardDoBloco(modalBlocoAberto.id, cardId)}
+          onEditarCard={note => { setModalBlocoAberto(null); setNoteEditando(note) }}
+        />
+      )}
       {composerAberto && <ComposerModal notes={notes} blocos={blocos} tokens={tokens} onFechar={() => setComposerAberto(false)} onCriado={onNoteCriado} />}
       {noteLendo && <ModalLeitura note={noteLendo} tokens={tokens} onFechar={() => setNoteLendo(null)} onExcluido={onNoteExcluido} />}
       {confirmModal && blocoEmConfirm && (
@@ -1401,6 +1689,15 @@ export function NotesPage() {
           tokens={tokens}
           onConfirmar={() => confirmModal.tipo === 'desfazer' ? desfazerBloco(confirmModal.blocoId) : destruirBloco(confirmModal.blocoId)}
           onCancelar={() => setConfirmModal(null)}
+        />
+      )}
+
+      {noteEditando && (
+        <ModalEditar
+          note={noteEditando}
+          tokens={tokens}
+          onFechar={() => setNoteEditando(null)}
+          onAtualizado={onNoteAtualizado}
         />
       )}
     </>
