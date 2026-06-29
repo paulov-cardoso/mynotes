@@ -341,7 +341,7 @@ interface CardDropdownProps {
   onEditar: () => void
 }
 
-function CardDropdown({ pos, tokens, blocos, onFormarBloco, onCliparEmBloco, onExcluir, onFechar }: CardDropdownProps) {
+function CardDropdown({ pos, tokens, blocos, onFormarBloco, onCliparEmBloco, onExcluir, onFechar, onEditar }: CardDropdownProps) {
   const [cliparPos, setCliparPos] = useState<{ top: number; left: number } | null>(null)
   const cliparBtnRef = useRef<HTMLButtonElement>(null)
   if (!pos) return null
@@ -455,7 +455,7 @@ interface PostItProps {
   onEditar: () => void
 }
 
-function PostIt({ note, posX, posY, isDragging, isSnapBack, destacado, isNew, dropdownAberto, blocos, zoom, tokens, onAbrir, onDragStart, onDropdownToggle, onFormarBloco, onCliparEmBloco, onExcluir, onDropdownFechar }: PostItProps) {
+function PostIt({ note, posX, posY, isDragging, isSnapBack, destacado, isNew, dropdownAberto, blocos, zoom, tokens, onAbrir, onDragStart, onDropdownToggle, onFormarBloco, onCliparEmBloco, onExcluir, onDropdownFechar, onEditar }: PostItProps) {
   const temFoto = Boolean(note.imagemCapa)
   const dropBtnRef = useRef<HTMLButtonElement>(null)
   const [dropdownPos, setDropdownPos] = useState<DropdownPos | null>(null)
@@ -591,13 +591,13 @@ function BlocoTorre({ bloco, posX, posY, isDragging, dragPos, dropdownAberto, zo
 
 // ─── ModalBloco ───────────────────────────────────────────────────────────────
 interface ModalBlocoProps {
-  bloco: Bloco; tokens: ThemeTokens
+  bloco: Bloco; tokens: ThemeTokens; isMobile: boolean
   onFechar: () => void
   onRemoverCard: (cardId: number) => void
   onEditarCard: (note: Note) => void
 }
 
-function ModalBloco({ bloco, tokens, onFechar, onRemoverCard, onEditarCard }: ModalBlocoProps) {
+function ModalBloco({ bloco, tokens, isMobile, onFechar, onRemoverCard, onEditarCard }: ModalBlocoProps) {
   const cards = bloco.cards
   const [idx, setIdx]         = useState(0)
   const [fase, setFase]       = useState<'idle' | 'virando' | 'chegando'>('idle')
@@ -648,10 +648,10 @@ function ModalBloco({ bloco, tokens, onFechar, onRemoverCard, onEditarCard }: Mo
   // Pilha de cards
   const lequeDireito = cards.slice(idx + 1)
 
-  // Card que está virando
+  // Card virando
   const cardSaindo = idxSaindo !== null ? cards[idxSaindo] : null
 
-  // Animação do card principal
+  // Animação do card
   let cardAnim: string | undefined
   if (fase === 'virando') {
     cardAnim = direcao === 'avancar' ? 'paginaVira 0.32s ease-in forwards' : 'paginaViraVoltar 0.32s ease-in forwards'
@@ -672,12 +672,29 @@ function ModalBloco({ bloco, tokens, onFechar, onRemoverCard, onEditarCard }: Mo
 
       <div onClick={onFechar} style={{ position: 'fixed', inset: 0, zIndex: 99998, background: `rgba(${tokens.shadowRgb},0.12)`, backdropFilter: 'blur(10px)' }} />
 
-      <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', gap: 20 }}>
+      {/*  wrapper externo */}
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 99999,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        pointerEvents: 'none',
+        gap: isMobile ? 12 : 20,
+        padding: isMobile ? '16px 0' : 0,
+      }}>
 
-        {/* Container da carta com perspective no pai para efeito 3D correto */}
-        <div onClick={e => e.stopPropagation()} style={{ position: 'relative', width: 580, height: 520, pointerEvents: 'auto', perspective: '1200px' }}>
+        {/* Modal responsivo */}
+        <div onClick={e => e.stopPropagation()} style={{
+          position: 'relative',
+          width: isMobile ? '100%' : 580,
+          height: isMobile ? '70vh' : 520,
+          maxWidth: isMobile ? '100%' : 580,
+          pointerEvents: 'auto',
+          perspective: '1200px',
+          padding: isMobile ? '0 12px' : 0,
+          boxSizing: 'border-box',
+        }}>
 
-          {/* Pilha direita (próximos cards) */}
+          {/* Pilha de próximos cards) */}
           {lequeDireito.map((c, i) => {
             const lBg = c.imagemCapa
               ? { backgroundImage: `url(${c.imagemCapa})`, backgroundSize: 'cover', backgroundPosition: 'center' }
@@ -689,7 +706,6 @@ function ModalBloco({ bloco, tokens, onFechar, onRemoverCard, onEditarCard }: Mo
             )
           })}
 
-          {/* Verso do card saindo — aparece durante fase 'virando', fica fixo */}
           {cardSaindo && fase === 'virando' && (
             <div style={{ position: 'absolute', inset: 0, borderRadius: 20, background: versoCor(cardSaindo), border: `1px solid rgba(255,255,255,0.15)`, boxShadow: `0 24px 80px rgba(${tokens.shadowRgb},0.45)`, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <PrendedorSVG width={48} />
@@ -1304,12 +1320,29 @@ export function NotesPage() {
     e.preventDefault()
   }, [camX, camY])
 
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest('[data-card]')) return
+    if (e.touches.length !== 1) return
+    const touch = e.touches[0]
+    panRef.current = true
+    panStart.current = { x: touch.clientX, y: touch.clientY, camX, camY }
+  }, [camX, camY])
+
   useEffect(() => {
     function onMove(e: MouseEvent) {
       if (panRef.current) { setCamX(panStart.current.camX + (e.clientX - panStart.current.x)); setCamY(panStart.current.camY + (e.clientY - panStart.current.y)) }
       if (dragNoteRef.current) { const dx = (e.clientX - dragNoteRef.current.startMouseX) / zoom; const dy = (e.clientY - dragNoteRef.current.startMouseY) / zoom; setDragPos({ x: dragNoteRef.current.startCardX + dx, y: dragNoteRef.current.startCardY + dy }) }
       if (dragBlocoRef.current) { const dx = (e.clientX - dragBlocoRef.current.startMouseX) / zoom; const dy = (e.clientY - dragBlocoRef.current.startMouseY) / zoom; setDragPos({ x: dragBlocoRef.current.startX + dx, y: dragBlocoRef.current.startY + dy }) }
     }
+
+    function onTouchMove(e: TouchEvent) {
+      if (!panRef.current || e.touches.length !== 1) return
+      e.preventDefault()
+      const touch = e.touches[0]
+      setCamX(panStart.current.camX + (touch.clientX - panStart.current.x))
+      setCamY(panStart.current.camY + (touch.clientY - panStart.current.y))
+    }
+
     function onUp() {
       panRef.current = false
       if (dragNoteRef.current && dragPos) {
@@ -1335,8 +1368,17 @@ export function NotesPage() {
         dragBlocoRef.current = null; setDraggingBlocoId(null); setDragPos(null)
       }
     }
-    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp)
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    window.addEventListener('touchmove', onTouchMove, { passive: false })
+    window.addEventListener('touchend', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('touchmove', onTouchMove)
+      window.removeEventListener('touchend', onUp)
+    }
   }, [zoom, dragPos, notes, blocos])
 
   const onWheel = useCallback((e: WheelEvent) => {
@@ -1490,7 +1532,7 @@ export function NotesPage() {
         @keyframes cardEntrar { from { opacity: 0; transform: scale(0.55) translateY(-40px); } to { opacity: 1; transform: scale(1) translateY(0); } }
       `}</style>
 
-      <div ref={containerRef} onMouseDown={onMouseDown} style={{ position: 'fixed', top: 56, left: 0, right: 0, bottom: 0, overflow: 'hidden', cursor: 'grab', userSelect: 'none', background: tokens.background.gradient }}>
+      <div ref={containerRef} onMouseDown={onMouseDown} onTouchStart={onTouchStart} style={{ position: 'fixed', top: 56, left: 0, right: 0, bottom: 0, overflow: 'hidden', cursor: 'grab', userSelect: 'none', background: tokens.background.gradient }}>
         <div aria-hidden="true" style={{ position: 'absolute', inset: 0, backgroundImage: `radial-gradient(circle, rgba(120,80,160,0.18) 1.5px, transparent 1.5px)`, backgroundSize: `${GRID_COL * zoom}px ${GRID_ROW * zoom}px`, backgroundPosition: `${camX}px ${camY}px`, pointerEvents: 'none' }} />
 
         <div style={{ position: 'absolute', top: 0, left: 0, transform: `translate(${camX}px, ${camY}px) scale(${zoom})`, transformOrigin: '0 0', willChange: 'transform', overflow: 'visible' }}>
@@ -1674,6 +1716,7 @@ export function NotesPage() {
         <ModalBloco
           bloco={modalBlocoAberto}
           tokens={tokens}
+          isMobile={isMobile}
           onFechar={() => setModalBlocoAberto(null)}
           onRemoverCard={cardId => removerCardDoBloco(modalBlocoAberto.id, cardId)}
           onEditarCard={note => { setModalBlocoAberto(null); setNoteEditando(note) }}
