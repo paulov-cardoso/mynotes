@@ -1391,6 +1391,44 @@ export function NotesPage() {
     return () => el.removeEventListener('wheel', onWheel)
   }, [onWheel, containerRef.current])
 
+  useEffect(() => {
+    let distanciaInicial: number | null = null
+
+    function onTouchStart(e: TouchEvent) {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX
+        const dy = e.touches[0].clientY - e.touches[1].clientY
+        distanciaInicial = Math.hypot(dx, dy)
+        panRef.current = false // cancela pan ao iniciar pinça
+      }
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (e.touches.length !== 2 || distanciaInicial === null) return
+      e.preventDefault()
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      const distanciaAtual = Math.hypot(dx, dy)
+      const ratio = distanciaAtual / distanciaInicial
+      distanciaInicial = distanciaAtual // atualiza a cada frame
+      setZoom(prev => parseFloat(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, prev * ratio)).toFixed(2)))
+    }
+
+    function onTouchEnd() {
+      if (distanciaInicial !== null) distanciaInicial = null
+    }
+
+    const el = containerRef.current; if (!el) return
+    el.addEventListener('touchstart',  onTouchStart, { passive: false })
+    el.addEventListener('touchmove',   onTouchMove,  { passive: false })
+    el.addEventListener('touchend',    onTouchEnd)
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove',  onTouchMove)
+      el.removeEventListener('touchend',   onTouchEnd)
+    }
+  }, [containerRef.current])
+
   function zoomIn()    { setZoom(z => Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(2))) }
   function zoomOut()   { setZoom(z => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(2))) }
   function zoomReset() {
