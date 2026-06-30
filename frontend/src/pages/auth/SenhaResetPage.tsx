@@ -32,7 +32,8 @@ export function SenhaResetPage() {
       <AuthLayout>
         <div style={{ textAlign: 'center', fontSize: '60px', marginBottom: '20px' }} aria-hidden="true">📧</div>
         <h1 style={{
-          textAlign: 'center', color: 'white', fontWeight: 700,
+          textAlign: 'center', fontWeight: 700,
+          color: 'rgba(40,15,80,0.82)',
           fontSize: '30px', marginBottom: '12px',
           fontFamily: "'Poppins', sans-serif",
           textShadow: '0 2px 8px rgba(0,0,0,0.18)',
@@ -41,7 +42,7 @@ export function SenhaResetPage() {
         </h1>
         <p style={{
           textAlign: 'center', fontSize: '14px', fontWeight: 300,
-          color: 'rgba(255,255,255,0.70)', marginBottom: '28px',
+          color: 'rgba(60,20,100,0.65)', marginBottom: '28px',
           lineHeight: 1.6, fontFamily: "'Poppins', sans-serif",
         }}>
           Funcionalidade em breve. Verifique sua caixa de entrada quando disponível.
@@ -58,7 +59,7 @@ export function SenhaResetPage() {
       <TituloAuth>Esqueci a senha</TituloAuth>
       <p style={{
         textAlign: 'center', fontSize: '14px', fontWeight: 300,
-        color: 'rgba(255,255,255,0.65)', marginBottom: '24px',
+        color: 'rgba(60,20,100,0.65)', marginBottom: '24px',
         fontFamily: "'Poppins', sans-serif",
       }}>
         Digite seu email e enviaremos um link para redefinir sua senha.
@@ -81,7 +82,7 @@ export function SenhaResetPage() {
 
       <p style={{
         textAlign: 'center', fontSize: '14px', fontWeight: 300,
-        color: 'rgba(255,255,255,0.80)', marginTop: '16px',
+        color: 'rgba(60,20,100,0.65)', marginTop: '16px',
         fontFamily: "'Poppins', sans-serif",
       }}>
         Lembrou a senha? <LinkAuth href="/login">Entrar</LinkAuth>

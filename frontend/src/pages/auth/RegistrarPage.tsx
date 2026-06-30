@@ -121,7 +121,7 @@ export function RegistrarPage() {
 
       <p style={{
         textAlign: 'center', fontSize: '14px', fontWeight: 300,
-        color: 'rgba(255,255,255,0.80)', marginTop: '16px',
+        color: 'rgba(60,20,100,0.65)', marginTop: '16px',
         fontFamily: "'Poppins', sans-serif",
       }}>
         Já possui uma conta? <LinkAuth href="/login">Entrar</LinkAuth>
